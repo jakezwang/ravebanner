@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "emoji-mart": "^5.6.0",
     "firebase": "^11.8.1",
     "http-proxy-middleware": "^3.0.5",
     "lucide-react": "^0.511.0",

@@ -136,12 +136,12 @@ export default function HomePage() {
             {filteredFlags.map(flag => (
               <div
                 key={flag.id}
-                className="flex flex-col sm:flex-row gap-4 p-4 bg-white/10 border border-purple-600 rounded-xl shadow-md backdrop-blur"
+                className="flex flex-col sm:flex-row gap-4 p-4 bg-white/10 border border-purple-600 rounded-xl shadow-md backdrop-blur overflow-hidden"
               >
                 <img
                   src={flag.imageUrl}
                   alt="flag"
-                  className="w-full sm:w-40 h-40 object-cover rounded-lg border border-purple-300"
+                  className="w-full sm:w-40 h-24 object-cover rounded-lg border border-purple-300"
                 />
                 <div className="flex flex-col justify-between text-sm sm:text-base text-purple-100 w-full">
 

@@ -1,109 +1,90 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { collection, getDocs, query, orderBy, Timestamp, updateDoc, doc } from 'firebase/firestore'
+import { collection, getDocs, query, addDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import countries from 'world-countries'
-import { ThumbsUp, Eye, MessageCircle } from 'lucide-react'
 import { useRouter } from 'next/router'
+import countries from 'world-countries'
+import { Picker } from 'emoji-mart'
 
 const countryMap: Record<string, string> = {}
 countries.forEach(c => {
   countryMap[c.cca2] = c.flag + ' ' + c.name.common
 })
 
-type Flag = {
-  id: string
-  imageUrl: string
-  country: string[]
-  language: string[]
-  genres: string[]
-  festival: string[] | string
-  seen: number
-  likes: number
-  createdAt: Timestamp
-}
+export default function FlagDetailPage() {
+  type Flag = {
+    id: string
+    imageUrl: string
+    country: string[]
+    language: string[]
+    genres: string[]
+    festival: string[] | string
+    seen: number
+    likes: number
+    createdAt?: string | number | Date
+  }
 
-export default function HomePage() {
-  const [flags, setFlags] = useState<Flag[]>([])
-  const [filteredFlags, setFilteredFlags] = useState<Flag[]>([])
-  const [search, setSearch] = useState('')
+  type Comment = {
+    name: string
+    message: string
+    createdAt?: string | number | Date
+    location?: string
+  }
+
+  const [flag, setFlag] = useState<Flag | null>(null)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [name, setName] = useState('')
+  const [message, setMessage] = useState('')
+  const [showEmojiPicker] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
-  const [seenFlags, setSeenFlags] = useState<string[]>([]);
-  const [likedFlags, setLikedFlags] = useState<string[]>([]);
   const router = useRouter()
+  const { id } = router.query
 
   useEffect(() => {
-    setSeenFlags(JSON.parse(localStorage.getItem('seenFlags') || '[]'));
-    setLikedFlags(JSON.parse(localStorage.getItem('likedFlags') || '[]'));
-  }, [])
+    if (!id) return
 
-  useEffect(() => {
-    const fetchFlags = async () => {
-      const q = query(collection(db, 'flags'), orderBy('createdAt', 'desc'))
-      const snapshot = await getDocs(q)
-      const counts: Record<string, number> = {}
-
-      const flagsData: Flag[] = await Promise.all(
-        snapshot.docs.map(async docSnap => {
-          const data = docSnap.data()
-          const commentSnap = await getDocs(collection(db, `flags/${docSnap.id}/comments`))
-          counts[docSnap.id] = commentSnap.size
-
-          return {
-            id: docSnap.id,
-            seen: data.seen || 0,
-            likes: data.likes || 0,
-            ...data,
-          } as Flag
-        })
-      )
-
-      setCommentCounts(counts)
-
-      const sortedFlags = flagsData.sort(
-        (a, b) => (b.seen + b.likes + (counts[b.id] || 0)) - (a.seen + a.likes + (counts[a.id] || 0))
-      )
-
-      setFlags(sortedFlags)
-      setFilteredFlags(sortedFlags)
+    const fetchFlag = async () => {
+      const snapshot = await getDocs(query(collection(db, 'flags')))
+      const flagDoc = snapshot.docs.find(doc => doc.id === id)
+      if (flagDoc) {
+        setFlag({ id: flagDoc.id, ...(flagDoc.data() as Omit<Flag, 'id'>) })
+        const commentSnap = await getDocs(collection(db, `flags/${flagDoc.id}/comments`))
+        const commentList = commentSnap.docs.map(doc => doc.data() as Comment)
+        setComments(
+          commentList.sort(
+            (a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()
+          )
+        )
+      }
       setLoading(false)
     }
 
-    fetchFlags()
-  }, [])
+    fetchFlag()
+  }, [id])
 
-  const iconButtonStyle = (active: boolean) =>
-    `flex items-center gap-1 text-sm px-3 py-1 rounded-full font-medium transition-transform ${
-      active ? 'scale-110 bg-purple-600 text-white' : 'bg-purple-700 hover:bg-purple-600 text-white'
-    }`
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!id || message.trim() === '') return
 
-  const handleInteraction = async (flagId: string, field: 'seen' | 'likes') => {
-    const storageKey = field === 'seen' ? 'seenFlags' : 'likedFlags';
-    const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const alreadyClicked = stored.includes(flagId);
+    const res = await fetch('https://ipapi.co/json/')
+    const ipData = await res.json()
 
-    const ref = doc(db, 'flags', flagId);
-    const updatedFlags = flags.map(flag => {
-      if (flag.id === flagId) {
-        const updated = { ...flag, [field]: flag[field] + (alreadyClicked ? -1 : 1) };
-        updateDoc(ref, { [field]: updated[field] });
-        return updated;
-      }
-      return flag;
-    });
+    await addDoc(collection(db, `flags/${id}/comments`), {
+      name: name.trim() || 'Anonymous',
+      message: message.trim(),
+      createdAt: new Date().toISOString(),
+      location: ipData.city ? `${ipData.city}, ${ipData.country_name}` : undefined,
+    })
 
-    const updatedStored = alreadyClicked
-      ? stored.filter((id: string) => id !== flagId)
-      : [...stored, flagId];
-
-    localStorage.setItem(storageKey, JSON.stringify(updatedStored));
-
-    if (field === 'seen') setSeenFlags(updatedStored);
-    if (field === 'likes') setLikedFlags(updatedStored);
-
-    setFlags(updatedFlags);
-    setFilteredFlags(updatedFlags);
+    setName('')
+    setMessage('')
+    const updatedComments = await getDocs(collection(db, `flags/${id}/comments`))
+    setComments(
+      updatedComments.docs
+        .map(doc => doc.data() as Comment)
+        .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())
+    )
   }
 
   return (
@@ -112,38 +93,109 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold text-purple-200">🌍 Festival Flags</h1>
           <Link
-            href="/submit"
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold transition hidden sm:inline"
+            href="/"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold transition"
           >
-            Submit a Flag
+            ← Back
           </Link>
         </div>
-        <input
-          type="text"
-          placeholder="Search by festival, genre, or country..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full mt-4 p-2 border border-purple-500 rounded bg-black/40 text-white placeholder-purple-300"
-        />
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         {loading ? (
-          <p>Loading flags...</p>
-        ) : filteredFlags.length === 0 ? (
-          <p>No matching flags found.</p>
+          <p>Loading flag...</p>
+        ) : !flag ? (
+          <p>Flag not found.</p>
         ) : (
-          <div className="space-y-6">
-            {/* ...flag cards remain unchanged... */}
-          </div>
+          <>
+            <div className="bg-white/10 p-6 rounded-xl border border-purple-700">
+              <img src={flag.imageUrl} alt="Flag" className="w-full max-h-80 object-cover rounded mb-4" />
+
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="font-semibold text-purple-300">Festival(s):</span>
+                {(Array.isArray(flag.festival) ? flag.festival : [flag.festival]).map((f, idx) => (
+                  <span key={idx} className="bg-purple-700/60 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px]">{f}</span>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="font-semibold text-purple-300">Country / Region(s):</span>
+                {flag.country.map((code, idx) => (
+                  <span key={idx} className="bg-purple-600/60 text-xs px-2 py-1 rounded-full">
+                    {countryMap[code] || code}
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="font-semibold text-purple-300">Languages:</span>
+                {flag.language.map((lang, idx) => (
+                  <span key={idx} className="bg-purple-500/40 text-xs px-2 py-1 rounded-full">{lang}</span>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="font-semibold text-purple-300">Genres:</span>
+                {flag.genres.map((genre, idx) => (
+                  <span key={idx} className="bg-indigo-600/50 text-xs px-2 py-1 rounded-full">{genre}</span>
+                ))}
+              </div>
+
+              <div className="flex gap-4 mt-4 text-sm text-purple-300">
+                <span>👁️ Seen: {flag.seen || 0}</span>
+                <span>👍 Likes: {flag.likes || 0}</span>
+                <span>💬 Comments: {comments.length}</span>
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <h2 className="text-lg font-bold text-purple-300 mb-4">💬 Comments</h2>
+              <form onSubmit={handleCommentSubmit} className="space-y-3 mb-6">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Your name (optional)"
+                  className="w-full p-2 rounded bg-black/30 border border-purple-500 text-white"
+                />
+                <textarea
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  placeholder="Write a comment... 😊🚀🎶"
+                  rows={3}
+                  className="w-full p-2 rounded bg-black/30 border border-purple-500 text-white"
+                  required
+                />
+                {showEmojiPicker && (
+                  <div className="mt-2">
+                    <Picker onSelect={(emoji: any) => setMessage(prev => prev + emoji.native)} theme="dark" />
+                  </div>
+                )}
+                <button type="submit" className="bg-purple-600 px-4 py-2 rounded text-white hover:bg-purple-700">
+                  Post Comment
+                </button>
+              </form>
+
+              {comments.length === 0 ? (
+                <p className="text-purple-400">No comments yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {comments.map((c, idx) => (
+                    <div key={idx} className="bg-white/10 p-3 rounded-lg border border-purple-700">
+                      <p className="font-semibold text-purple-200">{c.name || 'Anonymous'}</p>
+                      <p className="text-purple-100 text-sm whitespace-pre-wrap">{c.message}</p>
+                      <p className="text-xs text-purple-400 mt-1">
+                        🕒 {c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}
+                        {c.location && c.location !== 'undefined, undefined' ? ` 🌍 ${c.location}` : ''}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
-      <Link
-        href="/submit"
-        className="fixed bottom-4 right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg sm:hidden"
-      >
-        ➕
-      </Link>
     </div>
   )
 }
