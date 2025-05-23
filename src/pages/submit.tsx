@@ -6,8 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import countries from 'world-countries'
-import MultiSelect from '@/components/MultiSelect'
-import { Star } from 'lucide-react'
+import MultiSelect, { Option } from '@/components/MultiSelect'
 
 const languageOptions = [
   'English', 'Spanish', 'French', 'German', 'Mandarin', 'Hindi', 'Arabic',
@@ -22,22 +21,48 @@ const genreOptions = [
   'Garage', 'Jungle', 'Synthwave'
 ].map(g => ({ value: g, label: g }))
 
-const festivalOptions = [
-  'Tomorrowland', 'Ultra Music Festival', 'Electric Daisy Carnival (EDC)',
-  'Coachella', 'Lollapalooza', 'Creamfields', 'Sónar Festival', 'Awakenings',
-  'Mysteryland', 'Exit Festival', 'Amsterdam Dance Event (ADE)',
-  'Electric Zoo', 'Burning Man', 'Shambhala', 'Boom Festival',
-  'Outlook Festival', 'Dimensions Festival', 'Sziget Festival',
-  'Balaton Sound', 'Glastonbury'
-].map(f => ({ value: f, label: f }))
+const groupedFestivalOptions = [
+  {
+    label: 'EDC',
+    options: [
+      'EDC Las Vegas', 'EDC Orlando', 'EDC Mexico', 'EDC China', 'EDC Korea'
+    ]
+  },
+  {
+    label: 'Ultra',
+    options: [
+      'Ultra Miami', 'Ultra Europe', 'Ultra Japan', 'Ultra South Africa', 'Ultra Brazil'
+    ]
+  },
+  {
+    label: 'Tomorrowland',
+    options: [
+      'Tomorrowland Belgium', 'Tomorrowland Winter', 'Tomorrowland Brasil'
+    ]
+  },
+  {
+    label: 'Other',
+    options: [
+      'Creamfields', 'Sónar Festival', 'Mysteryland', 'Sunburn Festival', 'Parookaville', 'Ozora Festival',
+      'Amsterdam Dance Event', 'Untold Festival', 'Boom Festival', 'Dekmantel', 'Movement Festival',
+      'Electric Love Festival', 'Neopop Festival', 'Sonus Festival', 'Veld Music Festival',
+      'Hideout Festival', 'World DJ Festival', 'Lovefest', 'Terminal V', 'ARC Music Festival',
+      'Loveland Festival', 'Snowbombing', 'Dimensions Festival', 'S2O Festival', 'Lollapalooza',
+      'CRSSD Fest', 'DGTL Festival', 'MELT Festival', 'Balaton Sound', 'Neversea Festival',
+      'Boomtown', 'Nuits Sonores'
+    ]
+  }
+].map(group => ({
+  label: group.label,
+  options: group.options.map(name => ({ value: name, label: name }))
+}))
 
 export default function SubmitFlag() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [country, setCountry] = useState<string[]>([])
-  const [languages, setLanguages] = useState<{ value: string; label: string }[]>([])
-  const [genres, setGenres] = useState<{ value: string; label: string }[]>([])
-  const [festivals, setFestivals] = useState<{ value: string; label: string }[]>([])
-  const [vibe, setVibe] = useState(5)
+  const [languages, setLanguages] = useState<Option[]>([])
+  const [genres, setGenres] = useState<Option[]>([])
+  const [festivals, setFestivals] = useState<Option[]>([])
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -62,8 +87,9 @@ export default function SubmitFlag() {
         country,
         language: languages.map(l => l.value),
         genres: genres.map(g => g.value),
-        festival: festivals.map(f => f.value).join(', '),
-        vibe,
+        festival: festivals.map(f => f.value),
+        seen: 0,
+        likes: 0,
         createdAt: Timestamp.now(),
       })
 
@@ -128,31 +154,11 @@ export default function SubmitFlag() {
             <div>
               <label className="block mb-1">Festival Name(s):</label>
               <MultiSelect
-                options={festivalOptions}
+                options={groupedFestivalOptions}
                 selectedOptions={festivals}
                 onChange={setFestivals}
-                placeholder="Select Festivals"
+                placeholder="Select or type festival names"
               />
-            </div>
-
-            <div>
-              <label className="block mb-1">Vibe Rating:</label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setVibe(v)}
-                    className="focus:outline-none"
-                  >
-                    <Star
-                      size={24}
-                      className={v <= vibe ? 'text-yellow-400' : 'text-gray-600'}
-                      fill={v <= vibe ? 'currentColor' : 'none'}
-                    />
-                  </button>
-                ))}
-              </div>
             </div>
 
             <button

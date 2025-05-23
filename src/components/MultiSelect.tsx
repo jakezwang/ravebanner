@@ -1,33 +1,41 @@
 // components/MultiSelect.tsx
-import Select, { MultiValue } from 'react-select';
+import CreatableSelect from 'react-select/creatable'
+import { GroupBase, MultiValue } from 'react-select'
 
-interface Option {
-  value: string;
-  label: string;
+export interface Option {
+  value: string
+  label: string
 }
 
 interface MultiSelectProps {
-  options: Option[];
-  selectedOptions: Option[];
-  onChange: (selected: Option[]) => void;
-  placeholder: string;
+  options: (Option | GroupBase<Option>)[]
+  selectedOptions: Option[]
+  onChange: (selected: Option[]) => void
+  placeholder: string
 }
 
-const MultiSelect: React.FC<MultiSelectProps> = ({ options, selectedOptions, onChange, placeholder }) => {
+const MultiSelect: React.FC<MultiSelectProps> = ({
+  options,
+  selectedOptions,
+  onChange,
+  placeholder
+}) => {
   const handleChange = (newValue: MultiValue<Option>) => {
-    onChange([...newValue]) // convert readonly to mutable array
+    onChange([...newValue])
   }
 
   return (
-    <Select
+    <CreatableSelect
       isMulti
       options={options}
       value={selectedOptions}
       onChange={handleChange}
       placeholder={placeholder}
       className="text-black"
+      classNamePrefix="react-select"
+      formatCreateLabel={(inputValue) => `Add "${inputValue}"`}
     />
-  );
-};
+  )
+}
 
-export default MultiSelect;
+export default MultiSelect
