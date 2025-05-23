@@ -5,7 +5,6 @@ import { collection, getDocs, query, addDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useRouter } from 'next/router'
 import countries from 'world-countries'
-import { Picker } from 'emoji-mart'
 
 const countryMap: Record<string, string> = {}
 countries.forEach(c => {
@@ -36,7 +35,6 @@ export default function FlagDetailPage() {
   const [comments, setComments] = useState<Comment[]>([])
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
-  const [showEmojiPicker] = useState(false)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const { id } = router.query
@@ -166,11 +164,6 @@ export default function FlagDetailPage() {
                   className="w-full p-2 rounded bg-black/30 border border-purple-500 text-white"
                   required
                 />
-                {showEmojiPicker && (
-                  <div className="mt-2">
-                    <Picker onSelect={(emoji: any) => setMessage(prev => prev + emoji.native)} theme="dark" />
-                  </div>
-                )}
                 <button type="submit" className="bg-purple-600 px-4 py-2 rounded text-white hover:bg-purple-700">
                   Post Comment
                 </button>
