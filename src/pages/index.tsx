@@ -7,6 +7,7 @@ import { ThumbsUp, Eye, MessageCircle } from 'lucide-react'
 import { useRouter } from 'next/router'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
+import toast, { Toaster } from 'react-hot-toast'
 
 const countryMap: Record<string, string> = {}
 countries.forEach(c => {
@@ -112,6 +113,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
+      <Toaster position="top-center" />
       <div className="max-w-5xl mx-auto px-4 py-10">
         <nav className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-purple-200">🌍 Festival Flags</h1>
@@ -160,14 +162,26 @@ export default function HomePage() {
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="font-semibold text-purple-300">Festival(s):</span>
                     {(Array.isArray(flag.festival) ? flag.festival : flag.festival.split(',')).map((f, idx) => (
-                      <span key={idx} className="bg-purple-700/60 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px]">{f}</span>
+                      <span
+                        key={idx}
+                        className="bg-purple-700/60 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px] cursor-pointer"
+                        title={f}
+                        onClick={() => toast(f)}
+                      >
+                        {f}
+                      </span>
                     ))}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="font-semibold text-purple-300">Country / Region(s):</span>
                     {flag.country.map((code, idx) => (
-                      <span key={idx} className="bg-purple-600/60 text-xs px-2 py-1 rounded-full">
+                      <span
+                        key={idx}
+                        className="bg-purple-600/60 text-xs px-2 py-1 rounded-full cursor-pointer"
+                        title={countryMap[code] || code}
+                        onClick={() => toast(countryMap[code] || code)}
+                      >
                         {countryMap[code] || code}
                       </span>
                     ))}
@@ -176,14 +190,28 @@ export default function HomePage() {
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="font-semibold text-purple-300">Languages:</span>
                     {flag.language.map((lang, idx) => (
-                      <span key={idx} className="bg-purple-500/40 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px]">{lang}</span>
+                      <span
+                        key={idx}
+                        className="bg-purple-500/40 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px] cursor-pointer"
+                        title={lang}
+                        onClick={() => toast(lang)}
+                      >
+                        {lang}
+                      </span>
                     ))}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="font-semibold text-purple-300">Genres:</span>
                     {flag.genres.map((genre, idx) => (
-                      <span key={idx} className="bg-indigo-600/50 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px]">{genre}</span>
+                      <span
+                        key={idx}
+                        className="bg-indigo-600/50 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px] cursor-pointer"
+                        title={genre}
+                        onClick={() => toast(genre)}
+                      >
+                        {genre}
+                      </span>
                     ))}
                   </div>
 
