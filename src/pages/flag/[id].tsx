@@ -5,6 +5,8 @@ import { collection, getDocs, query, addDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useRouter } from 'next/router'
 import countries from 'world-countries'
+import Lightbox from 'react-image-lightbox'
+import 'react-image-lightbox/style.css'
 
 const countryMap: Record<string, string> = {}
 countries.forEach(c => {
@@ -36,6 +38,7 @@ export default function FlagDetailPage() {
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const router = useRouter()
   const { id } = router.query
 
@@ -107,7 +110,16 @@ export default function FlagDetailPage() {
         ) : (
           <>
             <div className="bg-white/10 p-6 rounded-xl border border-purple-700">
-              <img src={flag.imageUrl} alt="Flag" className="w-full max-h-80 object-cover rounded mb-4" />
+              <div
+                className="cursor-pointer group"
+                onClick={() => setLightboxOpen(true)}
+              >
+                <img
+                  src={flag.imageUrl}
+                  alt="Flag"
+                  className="w-full aspect-[4/3] object-cover rounded mb-4 group-hover:brightness-110"
+                />
+              </div>
 
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="font-semibold text-purple-300">Festival(s):</span>
@@ -189,6 +201,13 @@ export default function FlagDetailPage() {
           </>
         )}
       </div>
+
+      {lightboxOpen && flag && (
+        <Lightbox
+          mainSrc={flag.imageUrl}
+          onCloseRequest={() => setLightboxOpen(false)}
+        />
+      )}
     </div>
   )
 }

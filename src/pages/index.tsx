@@ -5,6 +5,8 @@ import { db } from '@/lib/firebase'
 import countries from 'world-countries'
 import { ThumbsUp, Eye, MessageCircle } from 'lucide-react'
 import { useRouter } from 'next/router'
+import Lightbox from 'react-image-lightbox'
+import 'react-image-lightbox/style.css'
 
 const countryMap: Record<string, string> = {}
 countries.forEach(c => {
@@ -29,13 +31,15 @@ export default function HomePage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
-  const [seenFlags, setSeenFlags] = useState<string[]>([]);
-  const [likedFlags, setLikedFlags] = useState<string[]>([]);
+  const [seenFlags, setSeenFlags] = useState<string[]>([])
+  const [likedFlags, setLikedFlags] = useState<string[]>([])
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxImage, setLightboxImage] = useState('')
   const router = useRouter()
 
   useEffect(() => {
-    setSeenFlags(JSON.parse(localStorage.getItem('seenFlags') || '[]'));
-    setLikedFlags(JSON.parse(localStorage.getItem('likedFlags') || '[]'));
+    setSeenFlags(JSON.parse(localStorage.getItem('seenFlags') || '[]'))
+    setLikedFlags(JSON.parse(localStorage.getItem('likedFlags') || '[]'))
   }, [])
 
   useEffect(() => {
@@ -79,31 +83,31 @@ export default function HomePage() {
     }`
 
   const handleInteraction = async (flagId: string, field: 'seen' | 'likes') => {
-    const storageKey = field === 'seen' ? 'seenFlags' : 'likedFlags';
-    const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const alreadyClicked = stored.includes(flagId);
+    const storageKey = field === 'seen' ? 'seenFlags' : 'likedFlags'
+    const stored = JSON.parse(localStorage.getItem(storageKey) || '[]')
+    const alreadyClicked = stored.includes(flagId)
 
-    const ref = doc(db, 'flags', flagId);
+    const ref = doc(db, 'flags', flagId)
     const updatedFlags = flags.map(flag => {
       if (flag.id === flagId) {
-        const updated = { ...flag, [field]: flag[field] + (alreadyClicked ? -1 : 1) };
-        updateDoc(ref, { [field]: updated[field] });
-        return updated;
+        const updated = { ...flag, [field]: flag[field] + (alreadyClicked ? -1 : 1) }
+        updateDoc(ref, { [field]: updated[field] })
+        return updated
       }
-      return flag;
-    });
+      return flag
+    })
 
     const updatedStored = alreadyClicked
       ? stored.filter((id: string) => id !== flagId)
-      : [...stored, flagId];
+      : [...stored, flagId]
 
-    localStorage.setItem(storageKey, JSON.stringify(updatedStored));
+    localStorage.setItem(storageKey, JSON.stringify(updatedStored))
 
-    if (field === 'seen') setSeenFlags(updatedStored);
-    if (field === 'likes') setLikedFlags(updatedStored);
+    if (field === 'seen') setSeenFlags(updatedStored)
+    if (field === 'likes') setLikedFlags(updatedStored)
 
-    setFlags(updatedFlags);
-    setFilteredFlags(updatedFlags);
+    setFlags(updatedFlags)
+    setFilteredFlags(updatedFlags)
   }
 
   return (
@@ -138,11 +142,19 @@ export default function HomePage() {
                 key={flag.id}
                 className="flex flex-col sm:flex-row gap-4 p-4 bg-white/10 border border-purple-600 rounded-xl shadow-md backdrop-blur overflow-hidden"
               >
-                <img
-                  src={flag.imageUrl}
-                  alt="flag"
-                  className="w-full sm:w-40 h-24 object-cover rounded-lg border border-purple-300"
-                />
+                <div
+                  className="relative cursor-pointer group"
+                  onClick={() => {
+                    setLightboxImage(flag.imageUrl)
+                    setLightboxOpen(true)
+                  }}
+                >
+                  <img
+                    src={flag.imageUrl}
+                    alt="flag"
+                    className="w-full sm:w-40 aspect-[4/3] object-cover rounded-lg border border-purple-300 group-hover:brightness-110"
+                  />
+                </div>
                 <div className="flex flex-col justify-between text-sm sm:text-base text-purple-100 w-full">
 
                   <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -208,6 +220,12 @@ export default function HomePage() {
       >
         ➕
       </Link>
+      {lightboxOpen && (
+        <Lightbox
+          mainSrc={lightboxImage}
+          onCloseRequest={() => setLightboxOpen(false)}
+        />
+      )}
     </div>
   )
 }
