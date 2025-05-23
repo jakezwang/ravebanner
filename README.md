@@ -20,6 +20,30 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Build and Test Instructions
+
+### Build
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Build the project:
+   ```bash
+   npm run build
+   ```
+
+### Test
+1. Run the development server:
+   ```bash
+   npm run dev
+   ```
+2. Open [http://localhost:3000](http://localhost:3000) in your browser.
+3. Navigate to `/submit` to test the flag submission page.
+
+### Notes
+- Ensure your `.env.local` file is properly configured with Firebase credentials.
+- Use `npm run lint` to check for linting issues.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
