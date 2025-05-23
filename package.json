@@ -16,10 +16,10 @@
     "next": "^15.3.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-image-lightbox": "^5.1.4",
     "react-select": "^5.10.1",
     "uuid": "^11.1.0",
-    "world-countries": "^5.1.0"
+    "world-countries": "^5.1.0",
+    "yet-another-react-lightbox": "^3.23.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

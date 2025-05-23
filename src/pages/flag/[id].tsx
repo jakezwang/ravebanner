@@ -5,8 +5,8 @@ import { collection, getDocs, query, addDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useRouter } from 'next/router'
 import countries from 'world-countries'
-import Lightbox from 'react-image-lightbox'
-import 'react-image-lightbox/style.css'
+import Lightbox from 'yet-another-react-lightbox'
+import 'yet-another-react-lightbox/styles.css'
 
 const countryMap: Record<string, string> = {}
 countries.forEach(c => {
@@ -204,8 +204,9 @@ export default function FlagDetailPage() {
 
       {lightboxOpen && flag && (
         <Lightbox
-          mainSrc={flag.imageUrl}
-          onCloseRequest={() => setLightboxOpen(false)}
+          open={lightboxOpen}
+          close={() => setLightboxOpen(false)}
+          slides={[{ src: flag.imageUrl }]}
         />
       )}
     </div>

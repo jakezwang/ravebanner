@@ -5,8 +5,8 @@ import { db } from '@/lib/firebase'
 import countries from 'world-countries'
 import { ThumbsUp, Eye, MessageCircle } from 'lucide-react'
 import { useRouter } from 'next/router'
-import Lightbox from 'react-image-lightbox'
-import 'react-image-lightbox/style.css'
+import Lightbox from 'yet-another-react-lightbox'
+import 'yet-another-react-lightbox/styles.css'
 
 const countryMap: Record<string, string> = {}
 countries.forEach(c => {
@@ -222,8 +222,9 @@ export default function HomePage() {
       </Link>
       {lightboxOpen && (
         <Lightbox
-          mainSrc={lightboxImage}
-          onCloseRequest={() => setLightboxOpen(false)}
+          open={lightboxOpen}
+          close={() => setLightboxOpen(false)}
+          slides={[{ src: lightboxImage }]}
         />
       )}
     </div>
