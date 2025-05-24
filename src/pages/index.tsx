@@ -1,3 +1,4 @@
+// src/pages/index.tsx
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { collection, getDocs, query, orderBy, Timestamp, updateDoc, doc } from 'firebase/firestore'
@@ -16,7 +17,7 @@ countries.forEach(c => {
 type Flag = {
   id: string
   imageUrl: string
-  country: string[]
+  location: string[]
   language: string[]
   genres: string[]
   festival: string[] | string
@@ -39,6 +40,7 @@ export default function HomePage() {
   const [lightboxImage, setLightboxImage] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [sortOption, setSortOption] = useState<'newest' | 'popular' | 'seen' | 'likes'>('popular')
+  const [interactionMessage, setInteractionMessage] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -82,7 +84,7 @@ export default function HomePage() {
       result = result.filter(flag => {
         const allTags = [
           ...flag.festival,
-          ...flag.country.map(code => countryMap[code] || code),
+          ...flag.location,
           ...flag.language,
           ...flag.genres,
           flag.description || ''
@@ -107,9 +109,17 @@ export default function HomePage() {
   }, [flags, commentCounts, searchTags, sortOption])
 
   const iconButtonStyle = (active: boolean) =>
-    `flex items-center gap-1 text-sm px-3 py-1 rounded-full font-medium transition-transform ${
-      active ? 'scale-110 bg-purple-600 text-white' : 'bg-purple-700 hover:bg-purple-600 text-white'
+    `flex items-center gap-1 text-sm px-3 py-1 rounded-full font-semibold transition-transform ${
+      active ? 'bg-white text-purple-700 scale-105' : 'bg-purple-700 hover:bg-purple-600 text-white'
     }`
+
+  const pillClass = (label: string) => {
+    if (label.includes('Spotted')) return "bg-yellow-200 text-yellow-900"
+    if (label.includes('From')) return "bg-green-200 text-green-900"
+    if (label.includes('Speaks')) return "bg-blue-200 text-blue-900"
+    if (label.includes('Vibes')) return "bg-pink-200 text-pink-900"
+    return "bg-white text-black"
+  }
 
   const handleInteraction = async (flagId: string, field: 'seen' | 'likes') => {
     const storageKey = field === 'seen' ? 'seenFlags' : 'likedFlags'
@@ -136,6 +146,12 @@ export default function HomePage() {
     if (field === 'likes') setLikedFlags(updatedStored)
 
     setFlags(updatedFlags)
+
+    setInteractionMessage(alreadyClicked
+      ? `Removed your ${field === 'seen' ? 'seen' : 'like'} mark.`
+      : `Marked as ${field === 'seen' ? 'seen' : 'liked'}!`
+    )
+    setTimeout(() => setInteractionMessage(null), 2000)
   }
 
   const handleTagSearch = (tag: string) => {
@@ -154,7 +170,12 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
       <div className="max-w-5xl mx-auto px-4 py-10">
         <nav className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-purple-200">🌍 Festival Flags</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-purple-200">🌍 Festival Flags</h1>
+            <p className="text-sm text-purple-300 mt-1 max-w-xl">
+              A community-powered platform for tracking creative flags, banners, and totems seen at music festivals. Share what you&apos;ve spotted, or explore stories and info behind the ones that caught your eye.
+            </p>
+          </div>
           <Link
             href="/submit"
             className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold transition hidden sm:inline"
@@ -192,6 +213,14 @@ export default function HomePage() {
           ))}
         </div>
 
+        <p className="text-xs text-purple-300 mb-2">
+          ✅ Click <Eye size={12} className="inline" /> if you’ve <strong>seen</strong> this flag at a festival.
+          💜 Click <ThumbsUp size={12} className="inline ml-2" /> if it <strong>passed your vibe check</strong>.
+        </p>
+        {interactionMessage && (
+          <p className="text-xs text-green-300 mb-2">{interactionMessage}</p>
+        )}
+
         {loading ? (
           <p>Loading flags...</p>
         ) : filteredFlags.length === 0 ? (
@@ -217,58 +246,61 @@ export default function HomePage() {
                   />
                 </div>
                 <div className="flex flex-col justify-between text-sm sm:text-base text-purple-100 w-full">
-
                   {flag.description && (
-                    <p
-                      className="text-purple-200 text-sm font-semibold truncate mb-2"
-                      title={flag.description}
-                    >
+                    <p className="text-purple-200 text-sm font-semibold truncate mb-2" title={flag.description}>
                       {flag.description}
                     </p>
                   )}
 
                   {[
-                    { label: 'Festival(s):', items: Array.isArray(flag.festival) ? flag.festival : flag.festival.split(',') },
-                    { label: 'Country / Region(s):', items: flag.country.map(code => countryMap[code] || code) },
-                    { label: 'Languages:', items: flag.language },
-                    { label: 'Genres:', items: flag.genres }
+                    { label: '🎉 Spotted At Festivals:', items: Array.isArray(flag.festival) ? flag.festival : flag.festival.split(',') },
+                    { label: '📍 From:', items: flag.location || [] },
+                    { label: '🗣️ Speaks:', items: flag.language },
+                    { label: '🎧 Stage Vibes:', items: flag.genres }
                   ].map(({ label, items }, i) => (
-                    <div className="flex flex-wrap items-center gap-2 mb-2" key={i}>
-                      <span className="font-semibold text-purple-300">{label}</span>
-                      {items.map((item, idx) => (
-                        <span
-                          key={idx}
-                          onClick={() => showTagPopup(item)}
-                          title={item}
-                          className="cursor-pointer bg-purple-600/60 text-xs px-2 py-1 rounded-full truncate max-w-[100px]"
-                        >
-                          {item}
-                        </span>
-                      ))}
+                    <div className="flex flex-wrap gap-1 items-baseline mb-1" key={i}>
+                      <div className="text-xs font-semibold text-purple-300 leading-tight mr-2 whitespace-nowrap">{label}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {items.map((item, idx) => (
+                          <span
+                            key={idx}
+                            onClick={() => showTagPopup(item)}
+                            title={item}
+                            className={`${pillClass(label)} cursor-pointer font-medium px-2 py-0.5 rounded-full text-xs max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap transition-all`}
+                          >
+                            {item}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   ))}
 
-                  <div className="flex gap-3 mt-2 overflow-x-auto sm:flex-wrap">
+                  <div className="flex gap-2 mt-2 flex-wrap sm:flex-nowrap">
                     <button
                       onClick={() => handleInteraction(flag.id, 'seen')}
                       className={iconButtonStyle(seenFlags.includes(flag.id))}
+                      title="Click if you’ve seen this flag in real life"
                     >
-                      <Eye size={16} /> {flag.seen}
+                      <Eye size={16} />
+                      <span>{seenFlags.includes(flag.id) ? 'Seen' : 'I have seen it!'} ({flag.seen})</span>
                     </button>
                     <button
                       onClick={() => handleInteraction(flag.id, 'likes')}
                       className={iconButtonStyle(likedFlags.includes(flag.id))}
+                      title="Click if this flag passed your vibe check"
                     >
-                      <ThumbsUp size={16} /> {flag.likes}
+                      <ThumbsUp size={16} />
+                      <span>{likedFlags.includes(flag.id) ? 'Liked' : 'Like'} ({flag.likes})</span>
                     </button>
                     <button
                       onClick={() => router.push(`/flag/${flag.id}`)}
-                      className="flex items-center gap-1 text-sm text-purple-300 hover:text-white"
+                      title="See or add comments about this flag"
+                      className="flex items-center gap-1 text-sm px-3 py-1 rounded-full font-semibold transition-transform bg-indigo-700 hover:bg-indigo-600 text-white"
                     >
-                      <MessageCircle size={16} /> {commentCounts[flag.id] || 0}
+                      <MessageCircle size={16} />
+                      <span>{commentCounts[flag.id] || 0} Comment{commentCounts[flag.id] === 1 ? '' : 's'}</span>
                     </button>
                   </div>
-
                 </div>
               </div>
             ))}
@@ -278,9 +310,10 @@ export default function HomePage() {
 
       <Link
         href="/submit"
-        className="fixed bottom-4 right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg sm:hidden"
+        className="fixed bottom-4 right-4 z-50 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold shadow-lg sm:hidden flex items-center gap-2"
       >
-        ➕
+        <span className="text-lg">➕</span>
+        <span className="text-sm">Submit</span>
       </Link>
 
       {lightboxOpen && (

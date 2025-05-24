@@ -92,14 +92,14 @@ export default function FlagDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
       <div className="sticky top-0 z-50 bg-black/80 backdrop-blur px-4 py-4">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-purple-200">🌍 Festival Flags</h1>
-          <Link
-            href="/"
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold transition"
-          >
-            ← Back
-          </Link>
+  <div className="max-w-5xl mx-auto">
+    <Link
+      href="/"
+      className="inline-block mb-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold transition"
+    >
+      ← Back
+    </Link>
+    <h1 className="text-2xl font-bold text-purple-200">🌍 Festival Flags</h1>
         </div>
       </div>
 
