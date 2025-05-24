@@ -172,12 +172,12 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
       <div className="max-w-5xl mx-auto px-4 py-10">
         <nav className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3 mb-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
             <img src="/favicon.svg" alt="Festival Flags Logo" className="w-8 h-8" />
           <div>
-            <h1 className="text-3xl font-bold text-purple-200">Festival Flags</h1>
+            <h1 className="text-3xl font-bold text-purple-200 whitespace-nowrap">Festival Flags</h1>
           </div>
-            <p className="text-sm text-purple-300 max-w-xl sm:ml-12 mt-2 sm:mt-0">
+            <p className="text-sm text-purple-300 max-w-xl sm:ml-8 mt-0 sm:mt-0">
               A community-powered platform for tracking creative flags, banners, and totems seen at music festivals. Share what you&apos;ve spotted, or explore stories and info behind the ones that caught your eye.
             </p>
           </div>
@@ -189,7 +189,7 @@ export default function HomePage() {
           </Link>
         </nav>
 
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-0 mt-0">
           {searchTags.map((tag, idx) => (
             <span key={idx} className="bg-purple-500 px-2 py-1 text-sm rounded-full">
               {tag} <button onClick={() => setSearchTags(searchTags.filter(t => t !== tag))}>×</button>
@@ -203,10 +203,10 @@ export default function HomePage() {
           value={searchInput}
           onChange={e => setSearchInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleTagSearch(searchInput)}
-          className="w-full mb-4 p-2 border border-purple-500 rounded bg-black/40 text-white placeholder-purple-300"
+          className="w-full mb-2 p-2 border border-purple-500 rounded bg-black/40 text-white placeholder-purple-300"
         />
 
-        <div className="flex gap-4 mb-6 text-sm flex-wrap">
+        <div className="flex gap-4 mb-2 text-sm flex-wrap">
           {(['popular', 'newest', 'seen', 'likes'] as const).map(option => (
             <button
               key={option}
@@ -218,7 +218,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        <p className="text-xs text-purple-300 mb-2">
+        <p className="text-xs text-purple-300 mb-1">
           ✅ Click <Eye size={12} className="inline" /> if you’ve <strong>seen</strong> this flag at a festival.
           💜 Click <ThumbsUp size={12} className="inline ml-2" /> if it <strong>passed your vibe check</strong>.
         </p>
