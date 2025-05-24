@@ -145,10 +145,10 @@ export default function HomePage() {
     if (searchTags.length > 0) {
       result = result.filter(flag => {
         const allTags = [
-          ...flag.festival,
-          ...flag.location,
-          ...flag.language,
-          ...flag.genres,
+          ...(Array.isArray(flag.festival) ? flag.festival : []),
+          ...(Array.isArray(flag.location) ? flag.location : []),
+          ...(Array.isArray(flag.language) ? flag.language : []),
+          ...(Array.isArray(flag.genres) ? flag.genres : []),
           flag.description || ''
         ].map(t => t.toLowerCase())
         return searchTags.every(tag => allTags.some(t => t.includes(tag.toLowerCase())))
