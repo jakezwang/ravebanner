@@ -7,7 +7,6 @@ import { ThumbsUp, Eye, MessageCircle } from 'lucide-react'
 import { useRouter } from 'next/router'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
-import toast, { Toaster } from 'react-hot-toast'
 
 const countryMap: Record<string, string> = {}
 countries.forEach(c => {
@@ -24,18 +23,22 @@ type Flag = {
   seen: number
   likes: number
   createdAt: Timestamp
+  description?: string
 }
 
 export default function HomePage() {
   const [flags, setFlags] = useState<Flag[]>([])
   const [filteredFlags, setFilteredFlags] = useState<Flag[]>([])
-  const [search, setSearch] = useState('')
+  const [searchTags, setSearchTags] = useState<string[]>([])
+  const [searchInput, setSearchInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
   const [seenFlags, setSeenFlags] = useState<string[]>([])
   const [likedFlags, setLikedFlags] = useState<string[]>([])
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxImage, setLightboxImage] = useState('')
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [sortOption, setSortOption] = useState<'newest' | 'popular' | 'seen' | 'likes'>('popular')
   const router = useRouter()
 
   useEffect(() => {
@@ -65,18 +68,43 @@ export default function HomePage() {
       )
 
       setCommentCounts(counts)
-
-      const sortedFlags = flagsData.sort(
-        (a, b) => (b.seen + b.likes + (counts[b.id] || 0)) - (a.seen + a.likes + (counts[a.id] || 0))
-      )
-
-      setFlags(sortedFlags)
-      setFilteredFlags(sortedFlags)
+      setFlags(flagsData)
       setLoading(false)
     }
 
     fetchFlags()
   }, [])
+
+  useEffect(() => {
+    let result = [...flags]
+
+    if (searchTags.length > 0) {
+      result = result.filter(flag => {
+        const allTags = [
+          ...flag.festival,
+          ...flag.country.map(code => countryMap[code] || code),
+          ...flag.language,
+          ...flag.genres,
+          flag.description || ''
+        ].map(t => t.toLowerCase())
+        return searchTags.every(tag => allTags.some(t => t.includes(tag.toLowerCase())))
+      })
+    }
+
+    if (sortOption === 'popular') {
+      result.sort(
+        (a, b) => (b.seen + b.likes + (commentCounts[b.id] || 0)) - (a.seen + a.likes + (commentCounts[a.id] || 0))
+      )
+    } else if (sortOption === 'seen') {
+      result.sort((a, b) => b.seen - a.seen)
+    } else if (sortOption === 'likes') {
+      result.sort((a, b) => b.likes - a.likes)
+    } else {
+      result.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds)
+    }
+
+    setFilteredFlags(result)
+  }, [flags, commentCounts, searchTags, sortOption])
 
   const iconButtonStyle = (active: boolean) =>
     `flex items-center gap-1 text-sm px-3 py-1 rounded-full font-medium transition-transform ${
@@ -108,12 +136,22 @@ export default function HomePage() {
     if (field === 'likes') setLikedFlags(updatedStored)
 
     setFlags(updatedFlags)
-    setFilteredFlags(updatedFlags)
+  }
+
+  const handleTagSearch = (tag: string) => {
+    if (!searchTags.includes(tag)) {
+      setSearchTags([...searchTags, tag])
+    }
+    setSearchInput('')
+  }
+
+  const showTagPopup = (tag: string) => {
+    setSelectedTag(tag)
+    setTimeout(() => setSelectedTag(null), 2000)
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
-      <Toaster position="top-center" />
       <div className="max-w-5xl mx-auto px-4 py-10">
         <nav className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-purple-200">🌍 Festival Flags</h1>
@@ -125,13 +163,34 @@ export default function HomePage() {
           </Link>
         </nav>
 
+        <div className="flex flex-wrap gap-2 mb-4">
+          {searchTags.map((tag, idx) => (
+            <span key={idx} className="bg-purple-500 px-2 py-1 text-sm rounded-full">
+              {tag} <button onClick={() => setSearchTags(searchTags.filter(t => t !== tag))}>×</button>
+            </span>
+          ))}
+        </div>
+
         <input
           type="text"
-          placeholder="Search by festival, genre, or country..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full mb-8 p-2 border border-purple-500 rounded bg-black/40 text-white placeholder-purple-300"
+          placeholder="Search by tag or keyword..."
+          value={searchInput}
+          onChange={e => setSearchInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleTagSearch(searchInput)}
+          className="w-full mb-4 p-2 border border-purple-500 rounded bg-black/40 text-white placeholder-purple-300"
         />
+
+        <div className="flex gap-4 mb-6 text-sm flex-wrap">
+          {(['popular', 'newest', 'seen', 'likes'] as const).map(option => (
+            <button
+              key={option}
+              onClick={() => setSortOption(option)}
+              className={sortOption === option ? 'underline' : ''}
+            >
+              {option === 'popular' ? 'Most Popular' : option === 'newest' ? 'Newest' : option === 'seen' ? 'Most Seen' : 'Most Likes'}
+            </button>
+          ))}
+        </div>
 
         {loading ? (
           <p>Loading flags...</p>
@@ -159,61 +218,35 @@ export default function HomePage() {
                 </div>
                 <div className="flex flex-col justify-between text-sm sm:text-base text-purple-100 w-full">
 
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="font-semibold text-purple-300">Festival(s):</span>
-                    {(Array.isArray(flag.festival) ? flag.festival : flag.festival.split(',')).map((f, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-purple-700/60 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px] cursor-pointer"
-                        title={f}
-                        onClick={() => toast(f)}
-                      >
-                        {f}
-                      </span>
-                    ))}
-                  </div>
+                  {flag.description && (
+                    <p
+                      className="text-purple-200 text-sm font-semibold truncate mb-2"
+                      title={flag.description}
+                    >
+                      {flag.description}
+                    </p>
+                  )}
 
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="font-semibold text-purple-300">Country / Region(s):</span>
-                    {flag.country.map((code, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-purple-600/60 text-xs px-2 py-1 rounded-full cursor-pointer"
-                        title={countryMap[code] || code}
-                        onClick={() => toast(countryMap[code] || code)}
-                      >
-                        {countryMap[code] || code}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="font-semibold text-purple-300">Languages:</span>
-                    {flag.language.map((lang, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-purple-500/40 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px] cursor-pointer"
-                        title={lang}
-                        onClick={() => toast(lang)}
-                      >
-                        {lang}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="font-semibold text-purple-300">Genres:</span>
-                    {flag.genres.map((genre, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-indigo-600/50 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px] cursor-pointer"
-                        title={genre}
-                        onClick={() => toast(genre)}
-                      >
-                        {genre}
-                      </span>
-                    ))}
-                  </div>
+                  {[
+                    { label: 'Festival(s):', items: Array.isArray(flag.festival) ? flag.festival : flag.festival.split(',') },
+                    { label: 'Country / Region(s):', items: flag.country.map(code => countryMap[code] || code) },
+                    { label: 'Languages:', items: flag.language },
+                    { label: 'Genres:', items: flag.genres }
+                  ].map(({ label, items }, i) => (
+                    <div className="flex flex-wrap items-center gap-2 mb-2" key={i}>
+                      <span className="font-semibold text-purple-300">{label}</span>
+                      {items.map((item, idx) => (
+                        <span
+                          key={idx}
+                          onClick={() => showTagPopup(item)}
+                          title={item}
+                          className="cursor-pointer bg-purple-600/60 text-xs px-2 py-1 rounded-full truncate max-w-[100px]"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  ))}
 
                   <div className="flex gap-3 mt-2 overflow-x-auto sm:flex-wrap">
                     <button
@@ -242,18 +275,34 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
       <Link
         href="/submit"
         className="fixed bottom-4 right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg sm:hidden"
       >
         ➕
       </Link>
+
       {lightboxOpen && (
         <Lightbox
           open={lightboxOpen}
           close={() => setLightboxOpen(false)}
           slides={[{ src: lightboxImage }]}
         />
+      )}
+
+      {selectedTag && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-purple-900 text-white px-6 py-4 rounded-xl border border-purple-400 shadow-lg max-w-sm text-center relative">
+            <button
+              className="absolute top-2 right-2 text-purple-300 hover:text-white"
+              onClick={() => setSelectedTag(null)}
+            >
+              ✕
+            </button>
+            <p className="text-sm break-words">{selectedTag}</p>
+          </div>
+        </div>
       )}
     </div>
   )

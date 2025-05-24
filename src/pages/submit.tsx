@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import countries from 'world-countries'
 import MultiSelect, { Option } from '@/components/MultiSelect'
+import imageCompression from 'browser-image-compression'
 
 const languageOptions = [
   'English', 'Spanish', 'French', 'German', 'Mandarin', 'Hindi', 'Arabic',
@@ -24,21 +25,15 @@ const genreOptions = [
 const groupedFestivalOptions = [
   {
     label: 'EDC',
-    options: [
-      'EDC Las Vegas', 'EDC Orlando', 'EDC Mexico', 'EDC China', 'EDC Korea'
-    ]
+    options: ['EDC Las Vegas', 'EDC Orlando', 'EDC Mexico', 'EDC China', 'EDC Korea']
   },
   {
     label: 'Ultra',
-    options: [
-      'Ultra Miami', 'Ultra Europe', 'Ultra Japan', 'Ultra South Africa', 'Ultra Brazil'
-    ]
+    options: ['Ultra Miami', 'Ultra Europe', 'Ultra Japan', 'Ultra South Africa', 'Ultra Brazil']
   },
   {
     label: 'Tomorrowland',
-    options: [
-      'Tomorrowland Belgium', 'Tomorrowland Winter', 'Tomorrowland Brasil'
-    ]
+    options: ['Tomorrowland Belgium', 'Tomorrowland Winter', 'Tomorrowland Brasil']
   },
   {
     label: 'Other',
@@ -57,12 +52,14 @@ const groupedFestivalOptions = [
   options: group.options.map(name => ({ value: name, label: name }))
 }))
 
+
 export default function SubmitFlag() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [country, setCountry] = useState<string[]>([])
   const [languages, setLanguages] = useState<Option[]>([])
   const [genres, setGenres] = useState<Option[]>([])
   const [festivals, setFestivals] = useState<Option[]>([])
+  const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -78,8 +75,14 @@ export default function SubmitFlag() {
 
     setLoading(true)
     try {
+      const options = {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      }
+      const compressedFile = await imageCompression(imageFile, options)
       const imageRef = ref(storage, `flags/${uuidv4()}`)
-      await uploadBytes(imageRef, imageFile)
+      await uploadBytes(imageRef, compressedFile)
       const imageUrl = await getDownloadURL(imageRef)
 
       await addDoc(collection(db, 'flags'), {
@@ -91,6 +94,7 @@ export default function SubmitFlag() {
         seen: 0,
         likes: 0,
         createdAt: Timestamp.now(),
+        description,
       })
 
       alert('Flag submitted successfully!')
@@ -113,6 +117,18 @@ export default function SubmitFlag() {
           <h1 className="text-3xl font-bold mb-6 text-purple-200">Submit Your Festival Flag 🏳️‍🌈</h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block mb-1 font-semibold">Flag Description:</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={100}
+                placeholder="Taiwan & Japan Unity Flag"
+                className="w-full border border-purple-500 p-2 rounded bg-black/40 text-white placeholder-purple-300"
+              />
+            </div>
+
             <input
               type="file"
               accept="image/*"

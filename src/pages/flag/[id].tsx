@@ -24,6 +24,7 @@ export default function FlagDetailPage() {
     seen: number
     likes: number
     createdAt?: string | number | Date
+    description?: string
   }
 
   type Comment = {
@@ -120,6 +121,12 @@ export default function FlagDetailPage() {
                   className="w-full aspect-[4/3] object-cover rounded mb-4 group-hover:brightness-110"
                 />
               </div>
+
+              {flag.description && (
+                <p className="text-purple-200 text-lg font-semibold mb-4" title={flag.description}>
+                  {flag.description}
+                </p>
+              )}
 
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="font-semibold text-purple-300">Festival(s):</span>
