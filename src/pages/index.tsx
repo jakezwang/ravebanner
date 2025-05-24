@@ -52,8 +52,8 @@ export default function HomePage() {
   }
 
   const iconButtonStyle = (active: boolean) =>
-    `flex items-center gap-1 text-sm px-3 py-1 rounded-full font-semibold transition-transform ${active ? 'bg-white text-purple-700 scale-105' : 'bg-purple-700 hover:bg-purple-600 text-white'}`
-
+    `flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold transition-transform ${active ? 'bg-white text-purple-700 scale-105' : 'bg-purple-700 hover:bg-purple-600 text-white'
+    }`
   const pillClass = (label: string) => {
     if (label.includes('Spotted')) return "bg-yellow-200 text-yellow-900"
     if (label.includes('From')) return "bg-green-200 text-green-900"
