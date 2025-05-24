@@ -172,8 +172,11 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
       <div className="max-w-5xl mx-auto px-4 py-10">
         <nav className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <img src="/favicon.svg" alt="Festival Flags Logo" className="w-8 h-8" />
           <div>
-            <h1 className="text-3xl font-bold text-purple-200">🌍 Festival Flags</h1>
+            <h1 className="text-3xl font-bold text-purple-200">Festival Flags</h1>
+          </div>
             <p className="text-sm text-purple-300 mt-1 max-w-xl">
               A community-powered platform for tracking creative flags, banners, and totems seen at music festivals. Share what you&apos;ve spotted, or explore stories and info behind the ones that caught your eye.
             </p>
