@@ -92,14 +92,14 @@ export default function FlagDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
       <div className="sticky top-0 z-50 bg-black/80 backdrop-blur px-4 py-4">
-  <div className="max-w-5xl mx-auto">
-    <Link
-      href="/"
-      className="inline-block mb-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold transition"
-    >
-      ← Back
-    </Link>
-    <h1 className="text-2xl font-bold text-purple-200">🌍 Festival Flags</h1>
+        <div className="max-w-5xl mx-auto">
+          <Link
+            href="/"
+            className="inline-block mb-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold transition"
+          >
+            ← Back
+          </Link>
+          <h1 className="text-2xl font-bold text-purple-200">🌍 Festival Flags</h1>
         </div>
       </div>
 
@@ -123,39 +123,65 @@ export default function FlagDetailPage() {
               </div>
 
               {flag.description && (
-                <p className="text-purple-200 text-lg font-semibold mb-4" title={flag.description}>
+                <p className="text-purple-200 text-base font-semibold mb-2" title={flag.description}>
                   {flag.description}
                 </p>
               )}
 
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="font-semibold text-purple-300">Festival(s):</span>
-                {(Array.isArray(flag.festival) ? flag.festival : [flag.festival]).map((f, idx) => (
-                  <span key={idx} className="bg-purple-700/60 text-xs px-2 py-1 rounded-full whitespace-nowrap truncate max-w-[100px]">{f}</span>
-                ))}
+              <div className="flex items-baseline flex-wrap gap-2 mb-2">
+  <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">🎉 Spotted At Festivals:</span>
+                <div className="flex gap-2 overflow-x-auto py-1">
+                  {(Array.isArray(flag.festival) ? flag.festival : [flag.festival]).map((f, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-yellow-200 text-yellow-900 text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words"
+                    >
+                      {f}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="font-semibold text-purple-300">Country / Region(s):</span>
-                {flag.country.map((code, idx) => (
-                  <span key={idx} className="bg-purple-600/60 text-xs px-2 py-1 rounded-full">
-                    {countryMap[code] || code}
-                  </span>
-                ))}
+              <div className="flex items-baseline flex-wrap gap-2 mb-2">
+  <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">📍 From:</span>
+                <div className="flex gap-2 overflow-x-auto py-1">
+                  {flag.country.map((code, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-green-200 text-green-900 text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words"
+                    >
+                      {countryMap[code] || code}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="font-semibold text-purple-300">Languages:</span>
-                {flag.language.map((lang, idx) => (
-                  <span key={idx} className="bg-purple-500/40 text-xs px-2 py-1 rounded-full">{lang}</span>
-                ))}
+              <div className="flex items-baseline flex-wrap gap-2 mb-2">
+  <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">🗣️ Speaks:</span>
+                <div className="flex gap-2 overflow-x-auto py-1">
+                  {flag.language.map((lang, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-blue-200 text-blue-900 text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words"
+                    >
+                      {lang}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="font-semibold text-purple-300">Genres:</span>
-                {flag.genres.map((genre, idx) => (
-                  <span key={idx} className="bg-indigo-600/50 text-xs px-2 py-1 rounded-full">{genre}</span>
-                ))}
+              <div className="flex items-baseline flex-wrap gap-2 mb-2">
+  <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">🎧 Stage Vibes:</span>
+                <div className="flex gap-2 overflow-x-auto py-1">
+                  {flag.genres.map((genre, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-pink-200 text-pink-900 text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words"
+                    >
+                      {genre}
+                    </span>
+                  ))}
+                </div>
               </div>
 
               <div className="flex gap-4 mt-4 text-sm text-purple-300">
