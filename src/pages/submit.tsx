@@ -7,35 +7,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import MultiSelect, { Option } from '@/components/MultiSelect'
 import imageCompression from 'browser-image-compression'
+import { locationOptions, genreOptions, languageOptions } from '@/lib/options'
 
-const languageOptions = [ /* same as before */ ].map(lang => ({ value: lang, label: lang }))
-const genreOptions = [ /* same as before */ ].map(g => ({ value: g, label: g }))
 const groupedFestivalOptions = [ /* same as before */ ].map((group: { label: string; options: string[] }) => ({
   label: group.label,
   options: group.options.map(name => ({ value: name, label: name }))
 }))
-
-const locationOptions: Option[] = [
-  // US States 🇺🇸
-  "California 🇺🇸", "Texas 🇺🇸", "Florida 🇺🇸", "New York 🇺🇸", "Nevada 🇺🇸", "Illinois 🇺🇸", "Georgia 🇺🇸", "Arizona 🇺🇸", "Washington 🇺🇸", "Colorado 🇺🇸",
-  "Michigan 🇺🇸", "Massachusetts 🇺🇸", "Tennessee 🇺🇸", "Pennsylvania 🇺🇸", "North Carolina 🇺🇸", "Ohio 🇺🇸", "New Jersey 🇺🇸", "Virginia 🇺🇸", "Minnesota 🇺🇸", "Oregon 🇺🇸",
-  "Indiana 🇺🇸", "Missouri 🇺🇸", "Wisconsin 🇺🇸", "Maryland 🇺🇸", "South Carolina 🇺🇸", "Louisiana 🇺🇸", "Alabama 🇺🇸", "Connecticut 🇺🇸", "Utah 🇺🇸", "Iowa 🇺🇸",
-  "Hawaii 🇺🇸", "District of Columbia 🇺🇸",
-
-  // Major US Cities 🇺🇸
-  "New York City 🇺🇸", "Los Angeles 🇺🇸", "Chicago 🇺🇸", "Houston 🇺🇸", "Phoenix 🇺🇸", "Philadelphia 🇺🇸", "San Antonio 🇺🇸", "San Diego 🇺🇸", "Dallas 🇺🇸", "San Jose 🇺🇸",
-  "Austin 🇺🇸", "Jacksonville 🇺🇸", "Fort Worth 🇺🇸", "Columbus 🇺🇸", "Charlotte 🇺🇸", "San Francisco 🇺🇸", "Indianapolis 🇺🇸", "Seattle 🇺🇸", "Denver 🇺🇸", "Washington DC 🇺🇸",
-  "Salt Lake City 🇺🇸", "Las Vegas 🇺🇸", "Orlando 🇺🇸", "Miami 🇺🇸", "Boston 🇺🇸",
-
-  // Major EU/Asia/Oceania Festival Cities
-  "Suzhou 🇨🇳", "Zhuhai 🇨🇳", "Chengdu 🇨🇳",
-  "Amsterdam 🇳🇱", "Berlin 🇩🇪", "Barcelona 🇪🇸", "Paris 🇫🇷", "London 🇬🇧", "Brussels 🇧🇪", "Zurich 🇨🇭", "Prague 🇨🇿", "Vienna 🇦🇹", "Belgrade 🇷🇸",
-  "Tokyo 🇯🇵", "Seoul 🇰🇷", "Bangkok 🇹🇭", "Singapore 🇸🇬", "Taipei 🇹🇼", "Shanghai 🇨🇳", "Beijing 🇨🇳", "Bali 🇮🇩", "Goa 🇮🇳", "Kuala Lumpur 🇲🇾",
-  "Melbourne 🇦🇺", "Sydney 🇦🇺",
-
-  // Countries
-  "USA 🇺🇸", "Canada 🇨🇦", "Mexico 🇲🇽", "Brazil 🇧🇷", "Germany 🇩🇪", "UK 🇬🇧", "France 🇫🇷", "Netherlands 🇳🇱", "Spain 🇪🇸", "Belgium 🇧🇪", "India 🇮🇳", "Australia 🇦🇺", "South Korea 🇰🇷", "Japan 🇯🇵", "Thailand 🇹🇭", "China 🇨🇳", "Vietnam 🇻🇳", "Malaysia 🇲🇾", "Philippines 🇵🇭", "Indonesia 🇮🇩", "Singapore 🇸🇬", "Canada 🇨🇦", "Mexico 🇲🇽", "Brazil 🇧🇷", "Germany 🇩🇪", "UK 🇬🇧", "France 🇫🇷", "Netherlands 🇳🇱", "Spain 🇪🇸", "Belgium 🇧🇪", "India 🇮🇳", "Australia 🇦🇺", "South Korea 🇰🇷", "Japan 🇯🇵", "Thailand 🇹🇭"
-].map(loc => ({ value: loc, label: loc }))
 
 export default function SubmitFlag() {
   const [imageFile, setImageFile] = useState<File | null>(null)

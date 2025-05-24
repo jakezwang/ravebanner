@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { collection, getDocs, query, orderBy, Timestamp, updateDoc, doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import countries from 'world-countries'
-import { ThumbsUp, Eye, MessageCircle } from 'lucide-react'
+import { ThumbsUp, Eye, MessageCircle, Plus } from 'lucide-react'
 import { useRouter } from 'next/router'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
+import ClaimModal from '@/components/ClaimModal'
 
 const countryMap: Record<string, string> = {}
 countries.forEach(c => {
@@ -41,7 +42,68 @@ export default function HomePage() {
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [sortOption, setSortOption] = useState<'newest' | 'popular' | 'seen' | 'likes'>('popular')
   const [interactionMessage, setInteractionMessage] = useState<string | null>(null)
+  const [claimFlagId, setClaimFlagId] = useState<string | null>(null)
+  const [claimField, setClaimField] = useState<'location' | 'genres' | null>(null)
   const router = useRouter()
+
+  const openClaimModal = (flagId: string, field: 'location' | 'genres') => {
+    setClaimFlagId(flagId)
+    setClaimField(field)
+  }
+
+  const iconButtonStyle = (active: boolean) =>
+    `flex items-center gap-1 text-sm px-3 py-1 rounded-full font-semibold transition-transform ${active ? 'bg-white text-purple-700 scale-105' : 'bg-purple-700 hover:bg-purple-600 text-white'}`
+
+  const pillClass = (label: string) => {
+    if (label.includes('Spotted')) return "bg-yellow-200 text-yellow-900"
+    if (label.includes('From')) return "bg-green-200 text-green-900"
+    if (label.includes('Speaks')) return "bg-blue-200 text-blue-900"
+    if (label.includes('Vibes')) return "bg-pink-200 text-pink-900"
+    return "bg-white text-black"
+  }
+
+  const handleInteraction = async (flagId: string, field: 'seen' | 'likes') => {
+    const storageKey = field === 'seen' ? 'seenFlags' : 'likedFlags'
+    const stored = JSON.parse(localStorage.getItem(storageKey) || '[]')
+    const alreadyClicked = stored.includes(flagId)
+
+    const ref = doc(db, 'flags', flagId)
+    const updatedFlags = flags.map(flag => {
+      if (flag.id === flagId) {
+        const updated = { ...flag, [field]: flag[field] + (alreadyClicked ? -1 : 1) }
+        updateDoc(ref, { [field]: updated[field] })
+        return updated
+      }
+      return flag
+    })
+
+    const updatedStored = alreadyClicked ? stored.filter(id => id !== flagId) : [...stored, flagId]
+
+    localStorage.setItem(storageKey, JSON.stringify(updatedStored))
+
+    if (field === 'seen') setSeenFlags(updatedStored)
+    if (field === 'likes') setLikedFlags(updatedStored)
+
+    setFlags(updatedFlags)
+
+    setInteractionMessage(alreadyClicked
+      ? `Removed your ${field === 'seen' ? 'seen' : 'like'} mark.`
+      : `Marked as ${field === 'seen' ? 'seen' : 'liked'}!`
+    )
+    setTimeout(() => setInteractionMessage(null), 2000)
+  }
+
+  const handleTagSearch = (tag: string) => {
+    if (!searchTags.includes(tag)) {
+      setSearchTags([...searchTags, tag])
+    }
+    setSearchInput('')
+  }
+
+  const showTagPopup = (tag: string) => {
+    setSelectedTag(tag)
+    setTimeout(() => setSelectedTag(null), 2000)
+  }
 
   useEffect(() => {
     setSeenFlags(JSON.parse(localStorage.getItem('seenFlags') || '[]'))
@@ -94,9 +156,7 @@ export default function HomePage() {
     }
 
     if (sortOption === 'popular') {
-      result.sort(
-        (a, b) => (b.seen + b.likes + (commentCounts[b.id] || 0)) - (a.seen + a.likes + (commentCounts[a.id] || 0))
-      )
+      result.sort((a, b) => (b.seen + b.likes + (commentCounts[b.id] || 0)) - (a.seen + a.likes + (commentCounts[a.id] || 0)))
     } else if (sortOption === 'seen') {
       result.sort((a, b) => b.seen - a.seen)
     } else if (sortOption === 'likes') {
@@ -107,64 +167,6 @@ export default function HomePage() {
 
     setFilteredFlags(result)
   }, [flags, commentCounts, searchTags, sortOption])
-
-  const iconButtonStyle = (active: boolean) =>
-    `flex items-center gap-1 text-sm px-3 py-1 rounded-full font-semibold transition-transform ${
-      active ? 'bg-white text-purple-700 scale-105' : 'bg-purple-700 hover:bg-purple-600 text-white'
-    }`
-
-  const pillClass = (label: string) => {
-    if (label.includes('Spotted')) return "bg-yellow-200 text-yellow-900"
-    if (label.includes('From')) return "bg-green-200 text-green-900"
-    if (label.includes('Speaks')) return "bg-blue-200 text-blue-900"
-    if (label.includes('Vibes')) return "bg-pink-200 text-pink-900"
-    return "bg-white text-black"
-  }
-
-  const handleInteraction = async (flagId: string, field: 'seen' | 'likes') => {
-    const storageKey = field === 'seen' ? 'seenFlags' : 'likedFlags'
-    const stored = JSON.parse(localStorage.getItem(storageKey) || '[]')
-    const alreadyClicked = stored.includes(flagId)
-
-    const ref = doc(db, 'flags', flagId)
-    const updatedFlags = flags.map(flag => {
-      if (flag.id === flagId) {
-        const updated = { ...flag, [field]: flag[field] + (alreadyClicked ? -1 : 1) }
-        updateDoc(ref, { [field]: updated[field] })
-        return updated
-      }
-      return flag
-    })
-
-    const updatedStored = alreadyClicked
-      ? stored.filter((id: string) => id !== flagId)
-      : [...stored, flagId]
-
-    localStorage.setItem(storageKey, JSON.stringify(updatedStored))
-
-    if (field === 'seen') setSeenFlags(updatedStored)
-    if (field === 'likes') setLikedFlags(updatedStored)
-
-    setFlags(updatedFlags)
-
-    setInteractionMessage(alreadyClicked
-      ? `Removed your ${field === 'seen' ? 'seen' : 'like'} mark.`
-      : `Marked as ${field === 'seen' ? 'seen' : 'liked'}!`
-    )
-    setTimeout(() => setInteractionMessage(null), 2000)
-  }
-
-  const handleTagSearch = (tag: string) => {
-    if (!searchTags.includes(tag)) {
-      setSearchTags([...searchTags, tag])
-    }
-    setSearchInput('')
-  }
-
-  const showTagPopup = (tag: string) => {
-    setSelectedTag(tag)
-    setTimeout(() => setSelectedTag(null), 2000)
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
@@ -254,23 +256,32 @@ export default function HomePage() {
 
                   {[
                     { label: '🎉 Spotted At Festivals:', items: Array.isArray(flag.festival) ? flag.festival : flag.festival.split(',') },
-                    { label: '📍 From:', items: flag.location || [] },
+                    { label: '📍 From:', items: flag.location || [], field: 'location' },
                     { label: '🗣️ Speaks:', items: flag.language },
-                    { label: '🎧 Stage Vibes:', items: flag.genres }
-                  ].map(({ label, items }, i) => (
+                    { label: '🎧 Stage Vibes:', items: flag.genres || [], field: 'genres' }
+                  ].map(({ label, items, field }, i) => (
                     <div className="flex flex-wrap gap-1 items-baseline mb-1" key={i}>
                       <div className="text-xs font-semibold text-purple-300 leading-tight mr-2 whitespace-nowrap">{label}</div>
                       <div className="flex flex-wrap gap-1">
-                        {items.map((item, idx) => (
-                          <span
-                            key={idx}
-                            onClick={() => showTagPopup(item)}
-                            title={item}
-                            className={`${pillClass(label)} cursor-pointer font-medium px-2 py-0.5 rounded-full text-xs max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap transition-all`}
+                        {items.length > 0 ? (
+                          items.map((item, idx) => (
+                            <span
+                              key={idx}
+                              onClick={() => showTagPopup(item)}
+                              title={item}
+                              className={`${pillClass(label)} cursor-pointer font-medium px-2 py-0.5 rounded-full text-xs max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap transition-all`}
+                            >
+                              {item}
+                            </span>
+                          ))
+                        ) : field ? (
+                          <button
+                            onClick={() => openClaimModal(flag.id, field as 'location' | 'genres')}
+                            className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-2 py-0.5 rounded-full text-xs font-semibold"
                           >
-                            {item}
-                          </span>
-                        ))}
+                            <Plus size={12} /> Add Info
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -336,6 +347,17 @@ export default function HomePage() {
             <p className="text-sm break-words">{selectedTag}</p>
           </div>
         </div>
+      )}
+
+      {claimFlagId && claimField && (
+        <ClaimModal
+          flagId={claimFlagId}
+          field={claimField}
+          onClose={() => {
+            setClaimFlagId(null)
+            setClaimField(null)
+          }}
+        />
       )}
     </div>
   )
