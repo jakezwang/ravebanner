@@ -77,7 +77,7 @@ export default function HomePage() {
       return flag
     })
 
-    const updatedStored = alreadyClicked ? stored.filter(id => id !== flagId) : [...stored, flagId]
+    const updatedStored = alreadyClicked ? stored.filter((id: string) => id !== flagId) : [...stored, flagId]
 
     localStorage.setItem(storageKey, JSON.stringify(updatedStored))
 
