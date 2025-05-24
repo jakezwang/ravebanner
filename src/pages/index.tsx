@@ -172,18 +172,18 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
       <div className="max-w-5xl mx-auto px-4 py-10">
         <nav className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-2 flex-wrap sm:flex-nowrap">
             <img src="/favicon.svg" alt="Festival Flags Logo" className="w-8 h-8" />
           <div>
             <h1 className="text-3xl font-bold text-purple-200">Festival Flags</h1>
           </div>
-            <p className="text-sm text-purple-300 mt-1 max-w-xl">
+            <p className="text-sm text-purple-300 max-w-xl sm:ml-12 mt-2 sm:mt-0">
               A community-powered platform for tracking creative flags, banners, and totems seen at music festivals. Share what you&apos;ve spotted, or explore stories and info behind the ones that caught your eye.
             </p>
           </div>
           <Link
             href="/submit"
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold transition hidden sm:inline"
+            className="bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-5 py-2 rounded-full font-semibold shadow transition-all whitespace-nowrap hidden sm:inline-block text-base transform hover:scale-105 hover:shadow-lg duration-200 ease-out"
           >
             Submit a Flag
           </Link>
