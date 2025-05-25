@@ -6,6 +6,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { locationOptions, genreOptions, languageOptions, festivalOptions } from '@/lib/options';
 import MultiSelect from "@/components/MultiSelect";
 import Image from 'next/image';
+import bcrypt from 'bcryptjs';
 
 interface Flag {
   id: string;
@@ -19,6 +20,8 @@ interface Flag {
   language?: string[];
   location?: string[];
 }
+
+const STATIC_PASSWORD_HASH = "$2a$10$7QJ9z1F9J8z1F9J8z1F9J8z1F9J8z1F9J8z1F9J8z1F9J8z1F9J8z1F9";
 
 export default function AdminDashboard() {
   const [flags, setFlags] = useState<Flag[]>([])
@@ -167,8 +170,9 @@ export default function AdminDashboard() {
     (Array.isArray(f.festival) ? f.festival.join(", ").toLowerCase() : "").includes(filter.toLowerCase())
   )
 
-  const handleStaticPasswordLogin = (password: string) => {
-    if (password === "jakewangadmin!") {
+  const handleStaticPasswordLogin = async (password: string) => {
+    const isMatch = await bcrypt.compare(password, STATIC_PASSWORD_HASH);
+    if (isMatch) {
       setUser({
         email: "static-admin@festivalflags.com",
         displayName: "Static Admin",
