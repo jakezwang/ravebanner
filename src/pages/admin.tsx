@@ -149,17 +149,22 @@ export default function AdminDashboard() {
     toast.success("Flag unapproved successfully!");
   }
 
-  // Update the deleteFlag function to delete the image from Firebase Storage.
+  // Update the deleteFlag function to validate Firebase Storage URLs
   const deleteFlag = async (id: string, imageUrl: string) => {
     try {
-      // Delete the document from Firestore.
+      // Check if the image URL is a valid Firebase Storage URL
+      if (imageUrl.startsWith('https://firebasestorage.googleapis.com')) {
+        // Delete the image from Firebase Storage
+        const imageRef = ref(storage, imageUrl);
+        await deleteObject(imageRef);
+      } else {
+        console.warn('Skipping deletion for non-Firebase Storage URL:', imageUrl);
+      }
+
+      // Delete the document from Firestore
       await deleteDoc(doc(db, "flags", id));
 
-      // Delete the image from Firebase Storage.
-      const imageRef = ref(storage, imageUrl);
-      await deleteObject(imageRef);
-
-      // Update the local state.
+      // Update the local state
       setFlags(flags.filter(flag => flag.id !== id));
       toast.success("Flag and associated image deleted successfully!");
     } catch (error) {
