@@ -29,8 +29,8 @@ export default function App({ Component, pageProps }: AppProps) {
         <main className="flex-grow">
           <Component {...pageProps} />
         </main>
-        <footer className="bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-center text-xs text-purple-400 py-6">
-          © 2025 Festival Flags. Community-powered and independently maintained.
+        <footer className="text-center text-sm text-purple-300 py-4 bg-black/80">
+          © {new Date().getFullYear()} Rave Banner. All rights reserved.
         </footer>
       </div>
     </>

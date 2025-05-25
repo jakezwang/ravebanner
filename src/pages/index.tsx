@@ -181,13 +181,13 @@ export default function HomePage() {
 
 return (
   <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
-    <div className="max-w-5xl mx-auto px-4 py-10">
+    <div className="max-w-5xl mx-auto px-4 py-10 overflow-x-hidden">
       <div className="mb-6 flex flex-wrap sm:flex-nowrap justify-between items-start gap-4 relative">
         <div className="flex items-center gap-2 flex-1">
           <img src="/favicon.svg" alt="Festival Flags Logo" className="w-8 h-8" />
           <div>
-            <h1 className="text-3xl font-bold text-purple-200 whitespace-nowrap">Festival Flags</h1>
-            <p className="text-sm text-purple-300">A community-powered platform for tracking creative flags, banners, and totems seen at music festivals. Share what you&apos;ve spotted, or explore stories and info behind the ones that caught your eye.</p>
+            <h1 className="text-3xl font-bold text-purple-200 whitespace-normal sm:whitespace-nowrap">Rave Banner - Discover Festival Flags & Totems</h1>
+            <p className="text-sm text-purple-300">Share creative flags, banners, and totems you spotted at music festivals or raves, and explore their stories and info.</p>
           </div>
         </div>
         <div className="sm:ml-4">
