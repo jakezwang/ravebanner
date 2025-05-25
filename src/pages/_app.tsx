@@ -30,7 +30,7 @@ export default function App({ Component, pageProps }: AppProps) {
           <Component {...pageProps} />
         </main>
         <footer className="text-center text-sm text-purple-300 py-4 bg-black/80">
-          © {new Date().getFullYear()} Rave Banner. All rights reserved.
+          © {new Date().getFullYear()} Rave Banner. Built for the community, independently maintained with PLUR.
         </footer>
       </div>
     </>
