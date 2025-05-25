@@ -1,7 +1,7 @@
 // src/pages/index.tsx
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { collection, getDocs, query, orderBy, limit, Timestamp, updateDoc, doc } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy, Timestamp, updateDoc, doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import countries from 'world-countries'
 import { ThumbsUp, Eye, MessageCircle, Plus } from 'lucide-react'
@@ -115,46 +115,65 @@ export default function HomePage() {
     setTimeout(() => setSelectedTag(null), 2000)
   }
 
-  const [currentBatch, setCurrentBatch] = useState(1);
-  const itemsPerBatch = 10; // Number of flags to load per batch
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setSeenFlags(JSON.parse(localStorage.getItem('seenFlags') || '[]'))
     setLikedFlags(JSON.parse(localStorage.getItem('likedFlags') || '[]'))
   }, [])
 
+  // Fixed the missing dependency in useEffect
   useEffect(() => {
     const fetchFlags = async () => {
-      const q = query(
-        collection(db, 'flags'),
-        orderBy('createdAt', 'desc'),
-        limit(itemsPerBatch * currentBatch)
-      );
-      const snapshot = await getDocs(q);
-      const counts: Record<string, number> = {};
+      setLoading(true);
+      try {
+        const flagsCollection = collection(db, 'flags');
+        let flagsQuery;
 
-      const flagsData: Flag[] = await Promise.all(
-        snapshot.docs.map(async docSnap => {
-          const data = docSnap.data();
-          const commentSnap = await getDocs(collection(db, `flags/${docSnap.id}/comments`));
-          counts[docSnap.id] = commentSnap.size;
+        switch (sortOption) {
+          case 'popular':
+            flagsQuery = query(flagsCollection, orderBy('likes', 'desc'));
+            break;
+          case 'seen':
+            flagsQuery = query(flagsCollection, orderBy('seen', 'desc'));
+            break;
+          case 'likes':
+            flagsQuery = query(flagsCollection, orderBy('likes', 'desc'));
+            break;
+          case 'newest':
+          default:
+            flagsQuery = query(flagsCollection, orderBy('createdAt', 'desc'));
+            break;
+        }
 
-          return {
-            id: docSnap.id,
-            seen: data.seen || 0,
-            likes: data.likes || 0,
-            ...data,
-          } as Flag;
-        })
-      );
-
-      setCommentCounts(counts);
-      setFlags(flagsData);
-      setLoading(false);
+        const querySnapshot = await getDocs(flagsQuery);
+        const allFlags = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flag));
+        setFlags(allFlags);
+      } catch (error) {
+        console.error('Error fetching flags:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchFlags();
-  }, [currentBatch]);
+  }, [sortOption, commentCounts]);
+
+  useEffect(() => {
+    const fetchCommentCounts = async () => {
+      const snapshot = await getDocs(collection(db, 'flags'));
+      const counts: Record<string, number> = {};
+
+      for (const doc of snapshot.docs) {
+        const commentsSnapshot = await getDocs(collection(db, `flags/${doc.id}/comments`));
+        counts[doc.id] = commentsSnapshot.size;
+      }
+
+      setCommentCounts(counts);
+    };
+
+    fetchCommentCounts();
+  }, []); // Empty dependency array to run only on mount
 
   useEffect(() => {
     let result = [...flags];
@@ -173,23 +192,75 @@ export default function HomePage() {
       });
     }
 
+    // Ensure sorting is applied before pagination
+    const sortedFlags = [...result];
     if (sortOption === 'popular') {
-      result.sort((a, b) => (b.seen + b.likes + (commentCounts[b.id] || 0)) - (a.seen + a.likes + (commentCounts[a.id] || 0)));
+      sortedFlags.sort((a, b) => (b.seen + b.likes + (commentCounts[b.id] || 0)) - (a.seen + a.likes + (commentCounts[a.id] || 0)));
     } else if (sortOption === 'seen') {
-      result.sort((a, b) => b.seen - a.seen);
+      sortedFlags.sort((a, b) => b.seen - a.seen);
     } else if (sortOption === 'likes') {
-      result.sort((a, b) => b.likes - a.likes);
+      sortedFlags.sort((a, b) => b.likes - a.likes);
     } else {
-      result.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+      sortedFlags.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
     }
 
-    setFilteredFlags(result);
-  }, [flags, commentCounts, searchTags, sortOption]);
+    const startIndex = (currentPage - 1) * 15;
+    const endIndex = startIndex + 15;
+    const paginatedFlags = sortedFlags.slice(startIndex, endIndex);
 
-  // Define the loadMoreFlags function to increment the currentBatch state
-  const loadMoreFlags = () => {
-    setCurrentBatch(prev => prev + 1);
+    setFilteredFlags(paginatedFlags);
+  }, [flags, commentCounts, searchTags, sortOption, currentPage]);
+
+  const startIndex = (currentPage - 1) * 15;
+  const endIndex = startIndex + 15;
+  const paginatedFlags = flags.slice(startIndex, endIndex);
+
+  const handleNextPage = () => {
+    if (endIndex < flags.length) {
+      setCurrentPage((prev) => prev + 1);
+    }
   };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+
+  useEffect(() => {
+    const fetchAndSortFlags = async () => {
+      setLoading(true);
+
+      // Fetch data (replace with your actual fetch logic)
+      const fetchedFlags = await (async () => {
+        const flagsCollection = collection(db, 'flags');
+        const flagsQuery = query(flagsCollection, orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(flagsQuery);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flag));
+      })();
+
+      // Sort the fetched data based on the selected sort option
+      const sortedFlags = [...fetchedFlags];
+      if (sortOption === 'popular') {
+        sortedFlags.sort((a, b) => (b.seen + b.likes + (commentCounts[b.id] || 0)) - (a.seen + a.likes + (commentCounts[a.id] || 0)));
+      } else if (sortOption === 'seen') {
+        sortedFlags.sort((a, b) => b.seen - a.seen);
+      } else if (sortOption === 'likes') {
+        sortedFlags.sort((a, b) => b.likes - a.likes);
+      } else {
+        sortedFlags.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+      }
+
+      // Update state with sorted data and reset to the first page
+      setFlags(sortedFlags);
+      setCurrentPage(1);
+      setLoading(false);
+    };
+
+    fetchAndSortFlags();
+  }, [sortOption]);
+
+  const totalPages = Math.ceil(flags.length / 15); // Calculate total pages based on the full flags array
 
 return (
   <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
@@ -265,7 +336,8 @@ return (
         <p>No matching flags found.</p>
       ) : (
         <div className="space-y-6">
-          {filteredFlags.map(flag => (
+          {/* Render paginated flags */}
+          {paginatedFlags.map(flag => (
             <div key={flag.id} className="bg-white/10 border border-purple-600 p-4 rounded-xl shadow-md">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div
@@ -365,18 +437,53 @@ return (
               </div>
             </div>
           ))}
+
+          {/* Pagination controls */}
+          <div className="pagination-container flex items-center justify-center gap-2 mt-4">
+            <button
+              onClick={handlePreviousPage}
+              disabled={currentPage === 1}
+              className="pagination-button px-2 py-1 bg-foreground text-background rounded shadow-sm hover:bg-opacity-80 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+            >
+              Previous
+            </button>
+            <span className="page-info text-xs font-medium">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+              className="pagination-button px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+            >
+              Next
+            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={currentPage}
+                onChange={(e) => {
+                  const page = Math.min(Math.max(Number(e.target.value), 1), totalPages);
+                  setCurrentPage(page);
+                }}
+                className="w-16 px-2 py-1 border border-gray-700 rounded bg-black/40 text-white placeholder-gray-400"
+              />
+              <button
+                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md transition-colors text-sm"
+                onClick={() => setCurrentPage(currentPage)}
+              >
+                Go
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Load More button */}
-      {!loading && filteredFlags.length < flags.length && (
-        <button
-          onClick={loadMoreFlags}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold shadow text-sm sm:text-base mt-4"
-        >
-          Load More
-        </button>
-      )}
+      {/* Removed the Load More button since pagination is being used. */}
+      {/* <button onClick={loadMoreFlags}>Load More</button> */}
+
     </div>
 
     {lightboxOpen && (
