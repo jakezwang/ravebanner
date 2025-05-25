@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import imageCompression from 'browser-image-compression'
+import { toast } from 'react-toastify'
 
 // Fix hydration mismatch for react-select
 const MultiSelect = dynamic(() => import('@/components/MultiSelect'), {
@@ -33,10 +34,9 @@ export default function SubmitFlag() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!imageFile) return alert('Please upload a flag image.')
-    if (locations.length === 0) return alert('Please select at least one location.')
-    if (festivals.length === 0) return alert('Please select at least one festival.')
-    if (description.length < 4) return alert('Add a bit more detail to your flag description.')
+
+    if (!imageFile) return toast.error('Please upload a flag image.')
+    if (description.length < 4) return toast.error('Add a bit more detail to your flag description.')
 
     setLoading(true)
     try {
@@ -53,24 +53,26 @@ export default function SubmitFlag() {
       const auth = getAuth()
       const user = auth.currentUser
 
-      await addDoc(collection(db, 'flags'), {
+      const flagData = {
         imageUrl,
-        location: locations,
-        language: languages.map((l) => l.value),
-        genres: genres.map((g) => g.value),
-        festival: festivals.map((f) => f.value),
+        description,
+        location: locations, // Optional
+        language: languages.map((l) => l.value), // Optional
+        genres: genres.map((g) => g.value), // Optional
+        festival: festivals.map((f) => f.value), // Optional
         seen: 0,
         likes: 0,
         createdAt: Timestamp.now(),
-        description,
         createdBy: user?.uid || null,
-      })
+      }
 
-      alert('Flag submitted successfully!')
+      await addDoc(collection(db, 'flags'), flagData)
+
+      toast.success('Flag submitted successfully!')
       router.push('/')
     } catch (err) {
       console.error('Error uploading flag:', err)
-      alert('Failed to submit. Try again.')
+      toast.error('Failed to submit. Try again.')
     }
     setLoading(false)
   }
