@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { collection, getDocs, updateDoc, deleteDoc, doc, query, DocumentData } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
-import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, User } from "firebase/auth"
+import { GoogleAuthProvider, onAuthStateChanged, signInWithRedirect, signOut, User } from "firebase/auth"
 import toast, { Toaster } from 'react-hot-toast';
 import { locationOptions, genreOptions, languageOptions, festivalOptions } from '@/lib/options';
 import MultiSelect from "@/components/MultiSelect";
@@ -172,7 +172,7 @@ export default function AdminDashboard() {
       <div className="p-8 text-center">
         <h1 className="text-xl font-bold mb-4">Admin Sign In</h1>
         <button
-          onClick={() => signInWithPopup(auth, new GoogleAuthProvider())}
+          onClick={() => signInWithRedirect(auth, new GoogleAuthProvider())}
           className="bg-blue-600 text-white px-4 py-2 rounded"
         >
           Sign in with Google
