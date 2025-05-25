@@ -167,16 +167,44 @@ export default function AdminDashboard() {
     (Array.isArray(f.festival) ? f.festival.join(", ").toLowerCase() : "").includes(filter.toLowerCase())
   )
 
+  const handleStaticPasswordLogin = (password: string) => {
+    if (password === "jakewangadmin!") {
+      setUser({
+        email: "static-admin@festivalflags.com",
+        displayName: "Static Admin",
+      } as User);
+      toast.success("Logged in as Static Admin!");
+    } else {
+      toast.error("Invalid password.");
+    }
+  };
+
   if (!user) {
     return (
       <div className="p-8 text-center">
         <h1 className="text-xl font-bold mb-4">Admin Sign In</h1>
         <button
           onClick={() => signInWithRedirect(auth, new GoogleAuthProvider())}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
+          className="bg-blue-600 text-white px-4 py-2 rounded mb-4"
         >
           Sign in with Google
         </button>
+        <div>
+          <input
+            type="password"
+            placeholder="Enter static password"
+            className="border p-2 rounded mb-2"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleStaticPasswordLogin(e.currentTarget.value);
+            }}
+          />
+          <button
+            onClick={() => handleStaticPasswordLogin((document.querySelector('input[type=password]') as HTMLInputElement)?.value || "")}
+            className="bg-gray-600 text-white px-4 py-2 rounded"
+          >
+            Login with Password
+          </button>
+        </div>
       </div>
     )
   }
