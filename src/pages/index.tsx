@@ -9,6 +9,7 @@ import { useRouter } from 'next/router'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import ClaimModal from '@/components/ClaimModal'
+import Image from 'next/image';
 
 const countryMap: Record<string, string> = {}
 countries.forEach(c => {
@@ -79,7 +80,6 @@ export default function HomePage() {
         updateDoc(ref, { [field]: updated[field] })
           .catch(error => {
             // Suppress the error by adding a comment to indicate intentional handling.
-            // eslint-disable-next-line no-console
             console.error('Error handling interaction:', error);
           })
         return updated
@@ -184,7 +184,7 @@ return (
     <div className="max-w-5xl mx-auto px-4 py-10 overflow-x-hidden">
       <div className="mb-6 flex flex-wrap sm:flex-nowrap justify-between items-start gap-4 relative">
         <div className="flex items-center gap-2 flex-1">
-          <img src="/favicon.svg" alt="Festival Flags Logo" className="w-8 h-8" />
+          <Image src="/favicon.svg" alt="Festival Flags Logo" width={32} height={32} className="w-8 h-8" />
           <div>
             <h1 className="text-3xl font-bold text-purple-200 whitespace-normal sm:whitespace-nowrap">Rave Banner - Discover Festival Flags & Totems</h1>
             <p className="text-sm text-purple-300">Share creative flags, banners, and totems you spotted at music festivals or raves, and explore their stories and info.</p>
@@ -263,10 +263,16 @@ return (
                     setLightboxOpen(true)
                   }}
                 >
-                  <img
+                  <Image
                     src={flag.imageUrl}
                     alt="flag"
+                    width={300} // Set a default width
+                    height={225} // Set a default height to maintain aspect ratio
                     className="w-full sm:w-40 aspect-[4/3] object-cover rounded border border-purple-300"
+                    onClick={() => {
+                      setLightboxImage(flag.imageUrl);
+                      setLightboxOpen(true);
+                    }}
                   />
                 </div>
 

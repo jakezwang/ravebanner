@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { collection, getDocs, query, addDoc } from 'firebase/firestore'
+import Image from 'next/image'
 import { db } from '@/lib/firebase'
 import { useRouter } from 'next/router'
 import countries from 'world-countries'
@@ -125,9 +125,11 @@ export default function FlagDetailPage() {
                 className="cursor-pointer group"
                 onClick={() => setLightboxOpen(true)}
               >
-                <img
+                <Image
                   src={flag.imageUrl}
                   alt="Flag"
+                  width={300} // Set a default width
+                  height={225} // Set a default height to maintain aspect ratio
                   className="w-full aspect-[4/3] object-cover rounded mb-4 group-hover:brightness-110"
                 />
               </div>

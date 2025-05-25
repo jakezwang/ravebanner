@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react"
 import { collection, getDocs, updateDoc, deleteDoc, doc, query, DocumentData } from "firebase/firestore"
-import { auth, db } from "@/lib/firebase"
+import { auth, db, storage } from "@/lib/firebase"
 import { GoogleAuthProvider, onAuthStateChanged, signInWithRedirect, signOut, User } from "firebase/auth"
 import toast, { Toaster } from 'react-hot-toast';
 import { locationOptions, genreOptions, languageOptions, festivalOptions } from '@/lib/options';
 import MultiSelect from "@/components/MultiSelect";
 import Image from 'next/image';
 import bcrypt from 'bcryptjs';
+import { ref, deleteObject } from "firebase/storage";
+import Lightbox from 'yet-another-react-lightbox';
+import 'yet-another-react-lightbox/styles.css';
 
 interface Flag {
   id: string;
@@ -19,14 +22,15 @@ interface Flag {
   createdAt?: { seconds: number };
   language?: string[];
   location?: string[];
+  verified?: boolean; // Indicates if the flag is approved.
 }
 
-const STATIC_PASSWORD_HASH = "$2a$10$7QJ9z1F9J8z1F9J8z1F9J8z1F9J8z1F9J8z1F9J8z1F9J8z1F9J8z1F9";
+// Update the STATIC_PASSWORD_HASH with the newly generated hash.
+const STATIC_PASSWORD_HASH = "$2b$10$wgiIxJcpXtvS2.oytSIsGuk3bZk9Sp9kVw3Fx7VK5tGyEN6XzB7EG";
 
 export default function AdminDashboard() {
   const [flags, setFlags] = useState<Flag[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState("")
   const [user, setUser] = useState<User | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
   const [editData, setEditData] = useState<{
@@ -50,6 +54,13 @@ export default function AdminDashboard() {
   const [bulkUploadMode, setBulkUploadMode] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [bulkImages, setBulkImages] = useState<File[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  const [approvalFilter, setApprovalFilter] = useState<'all' | 'approved' | 'pending'>('all');
+  const [searchTags, setSearchTags] = useState<string[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -122,16 +133,37 @@ export default function AdminDashboard() {
     fetchAnalytics();
   }, []);
 
+  // Update the approveFlag function to instantly reflect changes in the UI.
   const approveFlag = async (id: string) => {
-    await updateDoc(doc(db, "flags", id), { verified: true })
-    setFlags(flags.filter(flag => flag.id !== id))
-    toast.success("Flag approved successfully!")
+    await updateDoc(doc(db, "flags", id), { verified: true });
+    setFlags(prevFlags => prevFlags.map(flag => flag.id === id ? { ...flag, verified: true } : flag));
+    toast.success("Flag approved successfully!");
   }
 
-  const deleteFlag = async (id: string) => {
-    await deleteDoc(doc(db, "flags", id))
-    setFlags(flags.filter(flag => flag.id !== id))
-    toast.error("Flag deleted successfully!")
+  // Add an unapproveFlag function to handle unapproving flags.
+  const unapproveFlag = async (id: string) => {
+    await updateDoc(doc(db, "flags", id), { verified: false });
+    setFlags(prevFlags => prevFlags.map(flag => flag.id === id ? { ...flag, verified: false } : flag));
+    toast.success("Flag unapproved successfully!");
+  }
+
+  // Update the deleteFlag function to delete the image from Firebase Storage.
+  const deleteFlag = async (id: string, imageUrl: string) => {
+    try {
+      // Delete the document from Firestore.
+      await deleteDoc(doc(db, "flags", id));
+
+      // Delete the image from Firebase Storage.
+      const imageRef = ref(storage, imageUrl);
+      await deleteObject(imageRef);
+
+      // Update the local state.
+      setFlags(flags.filter(flag => flag.id !== id));
+      toast.success("Flag and associated image deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting flag:", error);
+      toast.error("Failed to delete flag. Please try again.");
+    }
   }
 
   const saveEdit = async () => {
@@ -164,12 +196,28 @@ export default function AdminDashboard() {
     // Implement bulk upload logic to process CSV and images.
   };
 
-  const filteredFlags = flags.filter(f =>
-    (f.title ?? "").toLowerCase().includes(filter.toLowerCase()) ||
-    String(f.country ?? "").toLowerCase().includes(filter.toLowerCase()) ||
-    (Array.isArray(f.festival) ? f.festival.join(", ").toLowerCase() : "").includes(filter.toLowerCase())
-  )
+  // Update filteredFlags to include tag-based filtering
+  const filteredFlags = flags.filter(f => {
+    const allTags = [
+      ...(Array.isArray(f.festival) ? f.festival : []),
+      ...(Array.isArray(f.location) ? f.location : []),
+      ...(Array.isArray(f.language) ? f.language : []),
+      ...(Array.isArray(f.genres) ? f.genres : []),
+      f.description || ''
+    ].map(t => t.toLowerCase());
 
+    return searchTags.every(tag => allTags.some(t => t.includes(tag.toLowerCase())));
+  }).filter(f => {
+    if (approvalFilter === 'approved') return f.verified;
+    if (approvalFilter === 'pending') return !f.verified;
+    return true;
+  })
+
+  const paginatedFlags = filteredFlags.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const totalPages = Math.ceil(filteredFlags.length / itemsPerPage);
+
+  // Remove debugging logs from the static password login function.
   const handleStaticPasswordLogin = async (password: string) => {
     const isMatch = await bcrypt.compare(password, STATIC_PASSWORD_HASH);
     if (isMatch) {
@@ -181,6 +229,19 @@ export default function AdminDashboard() {
     } else {
       toast.error("Invalid password.");
     }
+  };
+
+  // Update the search bar to clear input after adding a filter
+  const handleTagSearch = (tag: string) => {
+    if (!searchTags.includes(tag)) {
+      setSearchTags([...searchTags, tag]);
+      setSearchInput(''); // Clear the input after adding a tag
+    }
+  };
+
+  // Add a function to remove tags
+  const removeTag = (tag: string) => {
+    setSearchTags(searchTags.filter(t => t !== tag));
   };
 
   if (!user) {
@@ -221,47 +282,110 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold">Admin Flag Moderation</h1>
           <button onClick={() => signOut(auth)} className="text-sm text-red-600 underline">Sign out</button>
         </div>
-        <input
-          type="text"
-          placeholder="Filter by title, country, or festival"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="w-full p-2 mb-6 border rounded"
-        />
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search by tag or keyword..."
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleTagSearch(searchInput)}
+            className="w-full p-2 border border-purple-500 rounded bg-black/40 text-white placeholder-purple-300"
+          />
+          <div className="flex gap-2 mt-2 flex-wrap">
+            {searchTags.map((tag, idx) => (
+              <span
+                key={idx}
+                className="bg-purple-700 text-white px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 cursor-pointer"
+                onClick={() => removeTag(tag)}
+              >
+                {tag}
+                <button className="text-white hover:text-gray-300">✕</button>
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-4 mb-4">
+          <button
+            onClick={() => setApprovalFilter('all')}
+            className={`px-4 py-2 rounded ${approvalFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setApprovalFilter('approved')}
+            className={`px-4 py-2 rounded ${approvalFilter === 'approved' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          >
+            Approved
+          </button>
+          <button
+            onClick={() => setApprovalFilter('pending')}
+            className={`px-4 py-2 rounded ${approvalFilter === 'pending' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          >
+            Pending
+          </button>
+        </div>
         {loading ? (
           <p>Loading...</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredFlags.map(flag => (
-              <div key={flag.id} className="border rounded-xl shadow p-4 bg-white">
-                <Image
-                  src={flag.imageUrl}
-                  alt={flag.title ?? ''}
-                  width={300}
-                  height={200}
-                  className="w-full h-48 object-cover rounded"
-                />
-                <h2 className="text-lg font-semibold mt-2">{flag.title}</h2>
-                <p className="text-sm text-gray-500">{flag.country} • {flag.festival?.join(", ")}</p>
-                <p className="text-sm italic mb-2">{flag.description}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Added on: {new Date((flag.createdAt as { seconds: number }).seconds * 1000).toLocaleDateString()}
-                </p>
-                <div className="flex gap-2">
-                  <button onClick={() => approveFlag(flag.id)} className="bg-green-600 text-white px-4 py-1 rounded">Approve</button>
-                  <button onClick={() => deleteFlag(flag.id)} className="bg-red-600 text-white px-4 py-1 rounded">Delete</button>
-                  <button onClick={() => {
-                    setEditId(flag.id);
-                    setEditData({
-                      country: flag.country ?? "",
-                      festival: Array.isArray(flag.festival) ? flag.festival : [],
-                      genres: Array.isArray(flag.genres) ? flag.genres : [],
-                    });
-                  }} className="bg-yellow-500 text-white px-4 py-1 rounded">Edit</button>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedFlags.map(flag => (
+                <div key={flag.id} className="border rounded-xl shadow p-4 bg-white">
+                  <Image
+                    src={flag.imageUrl}
+                    alt={flag.title ?? ''}
+                    width={300}
+                    height={200}
+                    className="w-full h-48 object-cover rounded cursor-pointer"
+                    onClick={() => {
+                      setLightboxImage(flag.imageUrl);
+                      setLightboxOpen(true);
+                    }}
+                  />
+                  <h2 className="text-lg font-semibold mt-2">{flag.title}</h2>
+                  <p className="text-sm text-gray-500">{flag.country} • {flag.festival?.join(", ")}</p>
+                  <p className="text-sm italic mb-2">{flag.description}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Added on: {new Date((flag.createdAt as { seconds: number }).seconds * 1000).toLocaleDateString()}
+                  </p>
+                  <div className="flex gap-2">
+                    {!flag.verified && (
+                      <button onClick={() => approveFlag(flag.id)} className="bg-green-600 text-white px-4 py-1 rounded">Approve</button>
+                    )}
+                    {flag.verified && (
+                      <button onClick={() => unapproveFlag(flag.id)} className="bg-yellow-600 text-white px-4 py-1 rounded">Unapprove</button>
+                    )}
+                    <button onClick={() => deleteFlag(flag.id, flag.imageUrl)} className="bg-red-600 text-white px-4 py-1 rounded">Delete</button>
+                    <button onClick={() => {
+                      setEditId(flag.id);
+                      setEditData({
+                        country: flag.country ?? "",
+                        festival: Array.isArray(flag.festival) ? flag.festival : [],
+                        genres: Array.isArray(flag.genres) ? flag.genres : [],
+                      });
+                    }} className="bg-yellow-500 text-white px-4 py-1 rounded">Edit</button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2">Page {currentPage} of {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </>
         )}
 
         <div className="mb-6">
@@ -413,6 +537,14 @@ export default function AdminDashboard() {
             </div>
             <button onClick={handleBulkUpload} className="bg-blue-600 text-white px-4 py-2 rounded">Process Bulk Upload</button>
           </div>
+        )}
+
+        {lightboxOpen && lightboxImage && (
+          <Lightbox
+            open={lightboxOpen}
+            close={() => setLightboxOpen(false)}
+            slides={[{ src: lightboxImage }]}
+          />
         )}
       </div>
     </>
