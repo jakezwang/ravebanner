@@ -15,7 +15,8 @@ countries.forEach(c => {
   countryMap[c.cca2] = c.flag + ' ' + c.name.common
 })
 
-type Flag = {
+// Export the Flag type so it can be used in other files.
+export type Flag = {
   id: string
   imageUrl: string
   location: string[]
@@ -43,13 +44,17 @@ export default function HomePage() {
   const [sortOption, setSortOption] = useState<'newest' | 'popular' | 'seen' | 'likes'>('popular')
   const [interactionMessage, setInteractionMessage] = useState<string | null>(null)
   const [claimFlagId, setClaimFlagId] = useState<string | null>(null)
-  const [claimField, setClaimField] = useState<'location' | 'genres' | null>(null)
+  const [claimField, setClaimField] = useState<"location" | "genres" | "festival" | "language" | null>(null)
   const router = useRouter()
 
-  const openClaimModal = (flagId: string, field: 'location' | 'genres') => {
+  const openClaimModal = (
+    flagId: string,
+    field: "location" | "genres" | "festival" | "language"
+  ) => {
     setClaimFlagId(flagId)
     setClaimField(field)
   }
+  
 
   const iconButtonStyle = (active: boolean) =>
     `flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold transition-transform ${active ? 'bg-white text-purple-700 scale-105' : 'bg-purple-700 hover:bg-purple-600 text-white'
@@ -72,6 +77,11 @@ export default function HomePage() {
       if (flag.id === flagId) {
         const updated = { ...flag, [field]: flag[field] + (alreadyClicked ? -1 : 1) }
         updateDoc(ref, { [field]: updated[field] })
+          .catch(error => {
+            // Suppress the error by adding a comment to indicate intentional handling.
+            // eslint-disable-next-line no-console
+            console.error('Error handling interaction:', error);
+          })
         return updated
       }
       return flag
@@ -140,7 +150,7 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    let result = [...flags]
+    let result = [...flags];
 
     if (searchTags.length > 0) {
       result = result.filter(flag => {
@@ -150,95 +160,104 @@ export default function HomePage() {
           ...(Array.isArray(flag.language) ? flag.language : []),
           ...(Array.isArray(flag.genres) ? flag.genres : []),
           flag.description || ''
-        ].map(t => t.toLowerCase())
-        return searchTags.every(tag => allTags.some(t => t.includes(tag.toLowerCase())))
-      })
+        ].map(t => t.toLowerCase()); // Normalize tags to lowercase
+
+        return searchTags.every(tag => allTags.some(t => t.includes(tag.toLowerCase()))); // Match case-insensitively
+      });
     }
 
     if (sortOption === 'popular') {
-      result.sort((a, b) => (b.seen + b.likes + (commentCounts[b.id] || 0)) - (a.seen + a.likes + (commentCounts[a.id] || 0)))
+      result.sort((a, b) => (b.seen + b.likes + (commentCounts[b.id] || 0)) - (a.seen + a.likes + (commentCounts[a.id] || 0)));
     } else if (sortOption === 'seen') {
-      result.sort((a, b) => b.seen - a.seen)
+      result.sort((a, b) => b.seen - a.seen);
     } else if (sortOption === 'likes') {
-      result.sort((a, b) => b.likes - a.likes)
+      result.sort((a, b) => b.likes - a.likes);
     } else {
-      result.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds)
+      result.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
     }
 
-    setFilteredFlags(result)
-  }, [flags, commentCounts, searchTags, sortOption])
+    setFilteredFlags(result);
+  }, [flags, commentCounts, searchTags, sortOption]);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
-      <div className="max-w-5xl mx-auto px-4 py-10">
-        <nav className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-            <img src="/favicon.svg" alt="Festival Flags Logo" className="w-8 h-8" />
+return (
+  <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      <div className="mb-6 flex flex-wrap sm:flex-nowrap justify-between items-start gap-4 relative">
+        <div className="flex items-center gap-2 flex-1">
+          <img src="/favicon.svg" alt="Festival Flags Logo" className="w-8 h-8" />
           <div>
             <h1 className="text-3xl font-bold text-purple-200 whitespace-nowrap">Festival Flags</h1>
+            <p className="text-sm text-purple-300">A community-powered platform for tracking creative flags, banners, and totems seen at music festivals. Share what you&apos;ve spotted, or explore stories and info behind the ones that caught your eye.</p>
           </div>
-            <p className="text-sm text-purple-300 max-w-xl sm:ml-8 mt-0 sm:mt-0">
-              A community-powered platform for tracking creative flags, banners, and totems seen at music festivals. Share what you&apos;ve spotted, or explore stories and info behind the ones that caught your eye.
-            </p>
-          </div>
+        </div>
+        <div className="sm:ml-4">
           <Link
             href="/submit"
-            className="bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-5 py-2 rounded-full font-semibold shadow transition-all whitespace-nowrap hidden sm:inline-block text-base transform hover:scale-105 hover:shadow-lg duration-200 ease-out"
+            className="hidden sm:block bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold shadow text-sm sm:text-base"
           >
             Submit a Flag
           </Link>
-        </nav>
-
-        <div className="flex flex-wrap gap-2 mb-0 mt-0">
-          {searchTags.map((tag, idx) => (
-            <span key={idx} className="bg-purple-500 px-2 py-1 text-sm rounded-full">
-              {tag} <button onClick={() => setSearchTags(searchTags.filter(t => t !== tag))}>×</button>
-            </span>
-          ))}
         </div>
+        <Link
+          href="/submit"
+          className="sm:hidden fixed bg-purple-600 hover:bg-purple-700 text-white w-14 h-14 rounded-full flex flex-col items-center justify-center shadow bottom-4 right-4 z-50"
+          title="Submit a Flag"
+        >
+          <Plus size={20} />
+          <span className="text-[10px] font-medium">Submit</span>
+        </Link>
+      </div>
 
-        <input
-          type="text"
-          placeholder="Search by tag or keyword..."
-          value={searchInput}
-          onChange={e => setSearchInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleTagSearch(searchInput)}
-          className="w-full mb-2 p-2 border border-purple-500 rounded bg-black/40 text-white placeholder-purple-300"
-        />
+      <input
+        type="text"
+        placeholder="Search by tag or keyword..."
+        value={searchInput}
+        onChange={e => setSearchInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && handleTagSearch(searchInput)}
+        className="w-full mb-4 p-2 border border-purple-500 rounded bg-black/40 text-white placeholder-purple-300"
+      />
 
-        <div className="flex gap-4 mb-2 text-sm flex-wrap">
-          {(['popular', 'newest', 'seen', 'likes'] as const).map(option => (
-            <button
-              key={option}
-              onClick={() => setSortOption(option)}
-              className={sortOption === option ? 'underline' : ''}
-            >
-              {option === 'popular' ? 'Most Popular' : option === 'newest' ? 'Newest' : option === 'seen' ? 'Most Seen' : 'Most Likes'}
-            </button>
-          ))}
-        </div>
+      {/* Display selected filters */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {searchTags.map((tag, idx) => (
+          <span
+            key={idx}
+            className="bg-purple-700 text-white px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 cursor-pointer"
+            onClick={() => setSearchTags(searchTags.filter((_, i) => i !== idx))} // Remove filter on click
+          >
+            {tag}
+            <button className="text-white hover:text-gray-300">✕</button>
+          </span>
+        ))}
+      </div>
 
-        <p className="text-xs text-purple-300 mb-1">
-          ✅ Click <Eye size={12} className="inline" /> if you’ve <strong>seen</strong> this flag at a festival.
-          💜 Click <ThumbsUp size={12} className="inline ml-2" /> if it <strong>passed your vibe check</strong>.
-        </p>
-        {interactionMessage && (
-          <p className="text-xs text-green-300 mb-2">{interactionMessage}</p>
-        )}
+      <div className="flex gap-3 mb-4">
+        {(['popular', 'newest', 'seen', 'likes'] as const).map(option => (
+          <button
+            key={option}
+            onClick={() => setSortOption(option)}
+            className={`text-sm font-medium ${sortOption === option ? 'underline text-white' : 'text-purple-300'}`}
+          >
+            {option.charAt(0).toUpperCase() + option.slice(1)}
+          </button>
+        ))}
+      </div>
 
-        {loading ? (
-          <p>Loading flags...</p>
-        ) : filteredFlags.length === 0 ? (
-          <p>No matching flags found.</p>
-        ) : (
-          <div className="space-y-6">
-            {filteredFlags.map(flag => (
-              <div
-                key={flag.id}
-                className="flex flex-col sm:flex-row gap-4 p-4 bg-white/10 border border-purple-600 rounded-xl shadow-md backdrop-blur overflow-hidden"
-              >
+      {interactionMessage && (
+        <div className="mb-4 text-green-300 text-sm">{interactionMessage}</div>
+      )}
+
+      {loading ? (
+        <p>Loading flags...</p>
+      ) : filteredFlags.length === 0 ? (
+        <p>No matching flags found.</p>
+      ) : (
+        <div className="space-y-6">
+          {filteredFlags.map(flag => (
+            <div key={flag.id} className="bg-white/10 border border-purple-600 p-4 rounded-xl shadow-md">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <div
-                  className="relative cursor-pointer group"
+                  className="relative cursor-pointer"
                   onClick={() => {
                     setLightboxImage(flag.imageUrl)
                     setLightboxOpen(true)
@@ -247,53 +266,58 @@ export default function HomePage() {
                   <img
                     src={flag.imageUrl}
                     alt="flag"
-                    className="w-full sm:w-40 aspect-[4/3] object-cover rounded-lg border border-purple-300 group-hover:brightness-110"
+                    className="w-full sm:w-40 aspect-[4/3] object-cover rounded border border-purple-300"
                   />
                 </div>
+
                 <div className="flex flex-col justify-between text-sm sm:text-base text-purple-100 w-full">
                   {flag.description && (
-                    <p className="text-purple-200 text-sm font-semibold truncate mb-2" title={flag.description}>
-                      {flag.description}
-                    </p>
+                    <p className="text-purple-200 font-semibold mb-2 truncate" title={flag.description}>{flag.description}</p>
                   )}
 
-                  {[
-                    { label: '🎉 Spotted At Festivals:', items: Array.isArray(flag.festival) ? flag.festival : flag.festival.split(',') },
-                    { label: '📍 From:', items: flag.location || [], field: 'location' },
-                    { label: '🗣️ Speaks:', items: flag.language },
-                    { label: '🎧 Stage Vibes:', items: flag.genres || [], field: 'genres' }
-                  ].map(({ label, items, field }, i) => (
-                    <div className="flex flex-wrap gap-1 items-baseline mb-1" key={i}>
-                      <div className="text-xs font-semibold text-purple-300 leading-tight mr-2 whitespace-nowrap">{label}</div>
-                      <div className="flex flex-wrap gap-1">
-                        {items.length > 0 ? (
-                          items.map((item, idx) => (
-                            <span
-                              key={idx}
-                              onClick={() => showTagPopup(item)}
-                              title={item}
-                              className={`${pillClass(label)} cursor-pointer font-medium px-2 py-0.5 rounded-full text-xs max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap transition-all`}
-                            >
-                              {item}
-                            </span>
-                          ))
-                        ) : field ? (
-                          <button
-                            onClick={() => openClaimModal(flag.id, field as 'location' | 'genres')}
-                            className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-2 py-0.5 rounded-full text-xs font-semibold"
-                          >
-                            <Plus size={12} /> Add Info
-                          </button>
-                        ) : null}
-                      </div>
+                  {[{
+                    label: '🎉 Spotted At Festivals:',
+                    items: Array.isArray(flag.festival) ? flag.festival : flag.festival ? flag.festival.split(',') : [],
+                    field: 'festival'
+                  }, {
+                    label: '📍 From:',
+                    items: flag.location || [],
+                    field: 'location'
+                  }, {
+                    label: '🗣️ Speaks:',
+                    items: flag.language || [],
+                    field: 'language'
+                  }, {
+                    label: '🎧 Stage Vibes:',
+                    items: flag.genres || [],
+                    field: 'genres'
+                  }].map(({ label, items, field }, i) => (
+                    <div key={i} className="mb-1">
+                      <span className="text-xs font-semibold text-purple-300 mr-2">{label}</span>
+                      {items.map((item, idx) => (
+                        <span
+                          key={idx}
+                          onClick={() => showTagPopup(item)}
+                          title={item}
+                          className={`${pillClass(label)} cursor-pointer font-medium px-2 py-0.5 rounded-full text-xs mr-1 mb-1 inline-block`}
+                        >
+                          {item}
+                        </span>
+                      ))}
+                      <button
+                        onClick={() => openClaimModal(flag.id, field as 'location' | 'genres' | 'festival' | 'language')}
+                        className="inline-flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white w-6 h-6 rounded-full text-xs font-medium shadow-sm hover:scale-105 transform transition"
+                        title="Add"
+                      >
+                        <Plus size={12} className="animate-pulse" />
+                      </button>
                     </div>
                   ))}
 
-                  <div className="flex gap-2 mt-2 flex-wrap sm:flex-nowrap">
+                  <div className="flex gap-2 mt-2 flex-wrap">
                     <button
                       onClick={() => handleInteraction(flag.id, 'seen')}
                       className={iconButtonStyle(seenFlags.includes(flag.id))}
-                      title="Click if you’ve seen this flag in real life"
                     >
                       <Eye size={16} />
                       <span>{seenFlags.includes(flag.id) ? 'Seen' : 'I have seen it!'} ({flag.seen})</span>
@@ -301,15 +325,13 @@ export default function HomePage() {
                     <button
                       onClick={() => handleInteraction(flag.id, 'likes')}
                       className={iconButtonStyle(likedFlags.includes(flag.id))}
-                      title="Click if this flag passed your vibe check"
                     >
                       <ThumbsUp size={16} />
                       <span>{likedFlags.includes(flag.id) ? 'Liked' : 'Like'} ({flag.likes})</span>
                     </button>
                     <button
                       onClick={() => router.push(`/flag/${flag.id}`)}
-                      title="See or add comments about this flag"
-                      className="flex items-center gap-1 text-sm px-3 py-1 rounded-full font-semibold transition-transform bg-indigo-700 hover:bg-indigo-600 text-white"
+                      className="flex items-center gap-1 text-sm px-3 py-1 rounded-full font-semibold bg-indigo-700 hover:bg-indigo-600 text-white"
                     >
                       <MessageCircle size={16} />
                       <span>{commentCounts[flag.id] || 0} Comment{commentCounts[flag.id] === 1 ? '' : 's'}</span>
@@ -317,51 +339,39 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <Link
-        href="/submit"
-        className="fixed bottom-4 right-4 z-50 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold shadow-lg sm:hidden flex items-center gap-2"
-      >
-        <span className="text-lg">➕</span>
-        <span className="text-sm">Submit</span>
-      </Link>
-
-      {lightboxOpen && (
-        <Lightbox
-          open={lightboxOpen}
-          close={() => setLightboxOpen(false)}
-          slides={[{ src: lightboxImage }]}
-        />
-      )}
-
-      {selectedTag && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-purple-900 text-white px-6 py-4 rounded-xl border border-purple-400 shadow-lg max-w-sm text-center relative">
-            <button
-              className="absolute top-2 right-2 text-purple-300 hover:text-white"
-              onClick={() => setSelectedTag(null)}
-            >
-              ✕
-            </button>
-            <p className="text-sm break-words">{selectedTag}</p>
-          </div>
+            </div>
+          ))}
         </div>
       )}
-
-      {claimFlagId && claimField && (
-        <ClaimModal
-          flagId={claimFlagId}
-          field={claimField}
-          onClose={() => {
-            setClaimFlagId(null)
-            setClaimField(null)
-          }}
-        />
-      )}
     </div>
-  )
+
+    {lightboxOpen && (
+      <Lightbox open={lightboxOpen} close={() => setLightboxOpen(false)} slides={[{ src: lightboxImage }]} />
+    )}
+
+    {selectedTag && (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <div className="bg-purple-900 text-white px-6 py-4 rounded-xl border border-purple-400 shadow-lg max-w-sm text-center relative">
+          <button
+            className="absolute top-2 right-2 text-purple-300 hover:text-white"
+            onClick={() => setSelectedTag(null)}
+          >✕</button>
+          <p className="text-sm break-words">{selectedTag}</p>
+        </div>
+      </div>
+    )}
+
+    {claimFlagId && claimField && (
+      <ClaimModal
+        flagId={claimFlagId}
+        field={claimField as "location" | "genres" | "festival" | "language"}
+        onClose={() => {
+          setClaimFlagId(null);
+          setClaimField(null);
+        }}
+        setFlags={setFlags} // Pass setFlags to ClaimModal
+      />
+    )}
+  </div>
+)
 }

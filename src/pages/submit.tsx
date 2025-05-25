@@ -2,17 +2,24 @@ import { useState } from 'react'
 import { db, storage } from '@/lib/firebase'
 import { addDoc, collection, Timestamp } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { getAuth } from 'firebase/auth'
 import { v4 as uuidv4 } from 'uuid'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import MultiSelect, { Option } from '@/components/MultiSelect'
+import dynamic from 'next/dynamic'
 import imageCompression from 'browser-image-compression'
-import { locationOptions, genreOptions, languageOptions } from '@/lib/options'
 
-const groupedFestivalOptions = [ /* same as before */ ].map((group: { label: string; options: string[] }) => ({
-  label: group.label,
-  options: group.options.map(name => ({ value: name, label: name }))
-}))
+// Fix hydration mismatch for react-select
+const MultiSelect = dynamic(() => import('@/components/MultiSelect'), {
+  ssr: false,
+})
+import { Option } from '@/components/MultiSelect'
+import {
+  locationOptions,
+  genreOptions,
+  languageOptions,
+  festivalOptions,
+} from '@/lib/options'
 
 export default function SubmitFlag() {
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -28,6 +35,8 @@ export default function SubmitFlag() {
     e.preventDefault()
     if (!imageFile) return alert('Please upload a flag image.')
     if (locations.length === 0) return alert('Please select at least one location.')
+    if (festivals.length === 0) return alert('Please select at least one festival.')
+    if (description.length < 4) return alert('Add a bit more detail to your flag description.')
 
     setLoading(true)
     try {
@@ -41,16 +50,20 @@ export default function SubmitFlag() {
       await uploadBytes(imageRef, compressedFile)
       const imageUrl = await getDownloadURL(imageRef)
 
+      const auth = getAuth()
+      const user = auth.currentUser
+
       await addDoc(collection(db, 'flags'), {
         imageUrl,
         location: locations,
-        language: languages.map(l => l.value),
-        genres: genres.map(g => g.value),
-        festival: festivals.map(f => f.value),
+        language: languages.map((l) => l.value),
+        genres: genres.map((g) => g.value),
+        festival: festivals.map((f) => f.value),
         seen: 0,
         likes: 0,
         createdAt: Timestamp.now(),
         description,
+        createdBy: user?.uid || null,
       })
 
       alert('Flag submitted successfully!')
@@ -66,11 +79,15 @@ export default function SubmitFlag() {
     <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-indigo-900 text-white">
       <div className="max-w-2xl mx-auto px-4 py-10">
         <nav className="mb-8 text-sm">
-          <Link href="/" className="text-purple-300 hover:text-white">← Back to Home</Link>
+          <Link href="/" className="text-purple-300 hover:text-white">
+            ← Back to Home
+          </Link>
         </nav>
 
         <div className="bg-white/10 p-8 rounded-2xl shadow-lg backdrop-blur-md">
-          <h1 className="text-3xl font-bold mb-6 text-purple-200">Submit Your Festival Flag 🏳️‍🌈</h1>
+          <h1 className="text-3xl font-bold mb-6 text-purple-200">
+          Share Your Festival Flag, Banner, or Totem 🏳️‍🌈
+          </h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -80,15 +97,15 @@ export default function SubmitFlag() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={100}
-                placeholder="Taiwan & Japan Unity Flag"
-                className="w-full border border-purple-500 p-2 rounded bg-black/40 text-white placeholder-purple-300"
+                placeholder="eg: Taiwan & Japan Unity Flag"
+                className="w-full border border-purple-500 p-2 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
               />
             </div>
 
             <input
               type="file"
               accept="image/*"
-              onChange={e => setImageFile(e.target.files?.[0] || null)}
+              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
               className="w-full border border-purple-500 p-2 rounded bg-black/40"
               required
             />
@@ -97,9 +114,11 @@ export default function SubmitFlag() {
               <label className="block mb-1">Location(s):</label>
               <MultiSelect
                 options={locationOptions}
-                selectedOptions={locationOptions.filter((option: Option) => locations.includes(option.value))}
-                onChange={(selected: Option[]) => setLocations(selected.map(opt => opt.value))}
-                placeholder="City, State, or Country..."
+                selectedOptions={locationOptions.filter((option: Option) =>
+                  locations.includes(option.value)
+                )}
+                onChange={(selected: Option[]) => setLocations(selected.map((opt) => opt.value))}
+                placeholder="City, State, or Country of this flag comes from" 
               />
             </div>
 
@@ -109,7 +128,7 @@ export default function SubmitFlag() {
                 options={languageOptions}
                 selectedOptions={languages}
                 onChange={setLanguages}
-                placeholder="Select Languages"
+                placeholder="Select languages this group speaks"
               />
             </div>
 
@@ -119,14 +138,14 @@ export default function SubmitFlag() {
                 options={genreOptions}
                 selectedOptions={genres}
                 onChange={setGenres}
-                placeholder="Select Genres"
+                placeholder="Select genres this flag supports"
               />
             </div>
 
             <div>
               <label className="block mb-1">Festival Name(s):</label>
               <MultiSelect
-                options={groupedFestivalOptions}
+                options={festivalOptions}
                 selectedOptions={festivals}
                 onChange={setFestivals}
                 placeholder="Select or type festival names"

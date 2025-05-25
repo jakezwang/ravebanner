@@ -13,6 +13,15 @@ countries.forEach(c => {
   countryMap[c.cca2] = c.flag + ' ' + c.name.common
 })
 
+// Use the pillClass function from the index page to ensure consistent styling for pills.
+const pillClass = (label: string) => {
+  if (label.includes('Spotted')) return "bg-yellow-200 text-yellow-900";
+  if (label.includes('From')) return "bg-green-200 text-green-900";
+  if (label.includes('Speaks')) return "bg-blue-200 text-blue-900";
+  if (label.includes('Vibes')) return "bg-pink-200 text-pink-900";
+  return "bg-white text-black";
+}
+
 export default function FlagDetailPage() {
   type Flag = {
     id: string
@@ -21,6 +30,7 @@ export default function FlagDetailPage() {
     language: string[]
     genres: string[]
     festival: string[] | string
+    location: string[]
     seen: number
     likes: number
     createdAt?: string | number | Date
@@ -129,12 +139,12 @@ export default function FlagDetailPage() {
               )}
 
               <div className="flex items-baseline flex-wrap gap-2 mb-2">
-  <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">🎉 Spotted At Festivals:</span>
+                <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">🎉 Spotted At Festivals:</span>
                 <div className="flex gap-2 overflow-x-auto py-1">
                   {(Array.isArray(flag.festival) ? flag.festival : [flag.festival]).map((f, idx) => (
                     <span
                       key={idx}
-                      className="bg-yellow-200 text-yellow-900 text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words"
+                      className={`${pillClass('🎉 Spotted At Festivals:')} text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words`}
                     >
                       {f}
                     </span>
@@ -143,26 +153,26 @@ export default function FlagDetailPage() {
               </div>
 
               <div className="flex items-baseline flex-wrap gap-2 mb-2">
-  <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">📍 From:</span>
+                <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">📍 From:</span>
                 <div className="flex gap-2 overflow-x-auto py-1">
-                  {flag.country.map((code, idx) => (
+                  {(flag.location || []).map((loc, idx) => (
                     <span
                       key={idx}
-                      className="bg-green-200 text-green-900 text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words"
+                      className={`${pillClass('📍 From:')} text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words`}
                     >
-                      {countryMap[code] || code}
+                      {loc}
                     </span>
                   ))}
                 </div>
               </div>
 
               <div className="flex items-baseline flex-wrap gap-2 mb-2">
-  <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">🗣️ Speaks:</span>
+                <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">🗣️ Speaks:</span>
                 <div className="flex gap-2 overflow-x-auto py-1">
                   {flag.language.map((lang, idx) => (
                     <span
                       key={idx}
-                      className="bg-blue-200 text-blue-900 text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words"
+                      className={`${pillClass('🗣️ Speaks:')} text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words`}
                     >
                       {lang}
                     </span>
@@ -171,12 +181,12 @@ export default function FlagDetailPage() {
               </div>
 
               <div className="flex items-baseline flex-wrap gap-2 mb-2">
-  <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">🎧 Stage Vibes:</span>
+                <span className="text-xs font-semibold text-purple-300 whitespace-nowrap">🎧 Stage Vibes:</span>
                 <div className="flex gap-2 overflow-x-auto py-1">
                   {flag.genres.map((genre, idx) => (
                     <span
                       key={idx}
-                      className="bg-pink-200 text-pink-900 text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words"
+                      className={`${pillClass('🎧 Stage Vibes:')} text-xs px-2 py-1 rounded-full min-w-fit max-w-xs break-words`}
                     >
                       {genre}
                     </span>
