@@ -38,11 +38,13 @@ export default function AdminDashboard() {
     festival: string[];
     genres: string[];
     language?: string[];
+    description?: string;
   }>({
     country: "",
     festival: [],
     genres: [],
     language: [],
+    description: "",
   })
   const [analytics, setAnalytics] = useState({
     totalPending: 0,
@@ -172,6 +174,7 @@ export default function AdminDashboard() {
       country: editData.country,
       festival: editData.festival,
       genres: editData.genres,
+      description: editData.description, // Save the description field
     });
     setFlags(prev =>
       prev.map(f =>
@@ -362,6 +365,7 @@ export default function AdminDashboard() {
                         country: flag.country ?? "",
                         festival: Array.isArray(flag.festival) ? flag.festival : [],
                         genres: Array.isArray(flag.genres) ? flag.genres : [],
+                        description: flag.description ?? "", // Include description in edit data
                       });
                     }} className="bg-yellow-500 text-white px-4 py-1 rounded">Edit</button>
                   </div>
@@ -450,6 +454,16 @@ export default function AdminDashboard() {
                 onChange={selected => setEditData({ ...editData, festival: selected.map(opt => opt.value) })}
                 placeholder="Select festivals"
               />
+              {/* Add a field to edit the description for each flag */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  value={editData.description || ''}
+                  onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="Enter a description for the flag"
+                />
+              </div>
               <div className="flex justify-end gap-2 mt-4">
                 <button onClick={() => setEditId(null)} className="text-sm px-4 py-2 bg-gray-200 rounded">Cancel</button>
                 <button onClick={saveEdit} className="text-sm px-4 py-2 bg-blue-600 text-white rounded">Save</button>
