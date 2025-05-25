@@ -1,7 +1,7 @@
 // src/pages/index.tsx
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { collection, getDocs, query, orderBy, Timestamp, updateDoc, doc } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy, limit, Timestamp, updateDoc, doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import countries from 'world-countries'
 import { ThumbsUp, Eye, MessageCircle, Plus } from 'lucide-react'
@@ -115,6 +115,9 @@ export default function HomePage() {
     setTimeout(() => setSelectedTag(null), 2000)
   }
 
+  const [currentBatch, setCurrentBatch] = useState(1);
+  const itemsPerBatch = 10; // Number of flags to load per batch
+
   useEffect(() => {
     setSeenFlags(JSON.parse(localStorage.getItem('seenFlags') || '[]'))
     setLikedFlags(JSON.parse(localStorage.getItem('likedFlags') || '[]'))
@@ -122,32 +125,36 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchFlags = async () => {
-      const q = query(collection(db, 'flags'), orderBy('createdAt', 'desc'))
-      const snapshot = await getDocs(q)
-      const counts: Record<string, number> = {}
+      const q = query(
+        collection(db, 'flags'),
+        orderBy('createdAt', 'desc'),
+        limit(itemsPerBatch * currentBatch)
+      );
+      const snapshot = await getDocs(q);
+      const counts: Record<string, number> = {};
 
       const flagsData: Flag[] = await Promise.all(
         snapshot.docs.map(async docSnap => {
-          const data = docSnap.data()
-          const commentSnap = await getDocs(collection(db, `flags/${docSnap.id}/comments`))
-          counts[docSnap.id] = commentSnap.size
+          const data = docSnap.data();
+          const commentSnap = await getDocs(collection(db, `flags/${docSnap.id}/comments`));
+          counts[docSnap.id] = commentSnap.size;
 
           return {
             id: docSnap.id,
             seen: data.seen || 0,
             likes: data.likes || 0,
             ...data,
-          } as Flag
+          } as Flag;
         })
-      )
+      );
 
-      setCommentCounts(counts)
-      setFlags(flagsData)
-      setLoading(false)
-    }
+      setCommentCounts(counts);
+      setFlags(flagsData);
+      setLoading(false);
+    };
 
-    fetchFlags()
-  }, [])
+    fetchFlags();
+  }, [currentBatch]);
 
   useEffect(() => {
     let result = [...flags];
@@ -178,6 +185,11 @@ export default function HomePage() {
 
     setFilteredFlags(result);
   }, [flags, commentCounts, searchTags, sortOption]);
+
+  // Define the loadMoreFlags function to increment the currentBatch state
+  const loadMoreFlags = () => {
+    setCurrentBatch(prev => prev + 1);
+  };
 
 return (
   <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
@@ -269,6 +281,7 @@ return (
                     width={300} // Set a default width
                     height={225} // Set a default height to maintain aspect ratio
                     className="w-full sm:w-40 aspect-[4/3] object-cover rounded border border-purple-300"
+                    loading="lazy"
                     onClick={() => {
                       setLightboxImage(flag.imageUrl);
                       setLightboxOpen(true);
@@ -353,6 +366,16 @@ return (
             </div>
           ))}
         </div>
+      )}
+
+      {/* Load More button */}
+      {!loading && filteredFlags.length < flags.length && (
+        <button
+          onClick={loadMoreFlags}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-semibold shadow text-sm sm:text-base mt-4"
+        >
+          Load More
+        </button>
       )}
     </div>
 
