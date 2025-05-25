@@ -314,28 +314,33 @@ return (
                     </div>
                   ))}
 
-                  <div className="flex gap-2 mt-2 flex-wrap">
-                    <button
-                      onClick={() => handleInteraction(flag.id, 'seen')}
-                      className={iconButtonStyle(seenFlags.includes(flag.id))}
-                    >
-                      <Eye size={16} />
-                      <span>{seenFlags.includes(flag.id) ? 'Seen' : 'I have seen it!'} ({flag.seen})</span>
-                    </button>
-                    <button
-                      onClick={() => handleInteraction(flag.id, 'likes')}
-                      className={iconButtonStyle(likedFlags.includes(flag.id))}
-                    >
-                      <ThumbsUp size={16} />
-                      <span>{likedFlags.includes(flag.id) ? 'Liked' : 'Like'} ({flag.likes})</span>
-                    </button>
-                    <button
-                      onClick={() => router.push(`/flag/${flag.id}`)}
-                      className="flex items-center gap-1 text-sm px-3 py-1 rounded-full font-semibold bg-indigo-700 hover:bg-indigo-600 text-white"
-                    >
-                      <MessageCircle size={16} />
-                      <span>{commentCounts[flag.id] || 0} Comment{commentCounts[flag.id] === 1 ? '' : 's'}</span>
-                    </button>
+                  <div className="flex justify-between items-end">
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      <button
+                        onClick={() => handleInteraction(flag.id, 'seen')}
+                        className={iconButtonStyle(seenFlags.includes(flag.id))}
+                      >
+                        <Eye size={16} />
+                        <span>{seenFlags.includes(flag.id) ? 'Seen' : 'I have seen it!'} ({flag.seen})</span>
+                      </button>
+                      <button
+                        onClick={() => handleInteraction(flag.id, 'likes')}
+                        className={iconButtonStyle(likedFlags.includes(flag.id))}
+                      >
+                        <ThumbsUp size={16} />
+                        <span>{likedFlags.includes(flag.id) ? 'Liked' : 'Like'} ({flag.likes})</span>
+                      </button>
+                      <button
+                        onClick={() => router.push(`/flag/${flag.id}`)}
+                        className="flex items-center gap-1 text-sm px-3 py-1 rounded-full font-semibold bg-indigo-700 hover:bg-indigo-600 text-white"
+                      >
+                        <MessageCircle size={16} />
+                        <span>{commentCounts[flag.id] || 0} Comment{commentCounts[flag.id] === 1 ? '' : 's'}</span>
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-gray-500">
+                      Added on: {new Date(flag.createdAt.seconds * 1000).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
               </div>
