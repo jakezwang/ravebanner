@@ -116,6 +116,7 @@ export default function HomePage() {
   }
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     setSeenFlags(JSON.parse(localStorage.getItem('seenFlags') || '[]'))
@@ -148,7 +149,10 @@ export default function HomePage() {
 
         const querySnapshot = await getDocs(flagsQuery);
         const allFlags = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flag));
-        setFlags(allFlags);
+        setTotalPages(Math.ceil(allFlags.length / 15));
+        const startIndex = (currentPage - 1) * 15;
+        const paginatedFlags = allFlags.slice(startIndex, startIndex + 15);
+        setFlags(paginatedFlags);
       } catch (error) {
         console.error('Error fetching flags:', error);
       } finally {
@@ -157,7 +161,7 @@ export default function HomePage() {
     };
 
     fetchFlags();
-  }, [sortOption, commentCounts]);
+  }, [sortOption, commentCounts, currentPage]);
 
   useEffect(() => {
     const fetchCommentCounts = async () => {
@@ -232,26 +236,22 @@ export default function HomePage() {
     console.log('Sorted Flags:', sortedFlags);
 
     const startIndex = (currentPage - 1) * 15;
-    const endIndex = startIndex + 15;
-    const paginatedFlags = sortedFlags.slice(startIndex, endIndex);
+    const paginatedFlags = sortedFlags.slice(startIndex, startIndex + 15);
 
     console.log('Paginated Flags:', paginatedFlags);
 
     setFilteredFlags(paginatedFlags);
   }, [flags, commentCounts, searchTags, searchInput, sortOption, currentPage]);
 
-  const startIndex = (currentPage - 1) * 15;
-  const endIndex = startIndex + 15;
-
   const handleNextPage = () => {
-    if (endIndex < flags.length) {
-      setCurrentPage((prev) => prev + 1);
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
     }
   };
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
+      setCurrentPage(currentPage - 1);
     }
   };
 
@@ -279,14 +279,25 @@ export default function HomePage() {
         sortedFlags.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
       }
 
-      // Update state with sorted data and reset to the first page
-      setFlags(sortedFlags);
+      // Apply pagination logic to limit flags to the first page
+      const paginatedFlags = sortedFlags.slice(0, 15);
+
+      // Update state with paginated data and reset to the first page
+      setFlags(paginatedFlags);
       setCurrentPage(1);
       setLoading(false);
     };
 
     fetchAndSortFlags();
-  }, [sortOption]);
+  }, [sortOption, commentCounts]);
+
+  useEffect(() => {
+    // Apply pagination whenever flags or currentPage changes
+    const startIndex = (currentPage - 1) * 15;
+    const paginatedFlags = flags.slice(startIndex, startIndex + 15);
+
+    setFilteredFlags(paginatedFlags);
+  }, [flags, currentPage]);
 
   useEffect(() => {
     // Apply filters to the fetched flags
@@ -322,8 +333,6 @@ export default function HomePage() {
 
     applyFilters();
   }, [flags, searchTags, searchInput]);
-
-  const totalPages = Math.ceil(flags.length / 15); // Calculate total pages based on the full flags array
 
   const paginationButtonStyle = `px-4 py-2 rounded-md font-semibold text-white bg-purple-700 hover:bg-purple-600 transition-colors`;
 
