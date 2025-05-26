@@ -20,6 +20,11 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Deployment
+
+Deployment to production is automatically triggered when changes are merged into the `master` branch.
+The production website is available at [ravebanner.org](https://ravebanner.org) or [ravebanner.com](https://ravebanner.com).
+
 ## Build and Test Instructions
 
 ### Build
@@ -39,10 +44,21 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
    ```
 2. Open [http://localhost:3000](http://localhost:3000) in your browser.
 3. Navigate to `/submit` to test the flag submission page.
+4. Navigate to `/admin` to access the admin console.
 
 ### Notes
 - Ensure your `.env.local` file is properly configured with Firebase credentials.
 - Use `npm run lint` to check for linting issues.
+
+## High Level Design
+
+This website is built using the [Next.js](https://nextjs.org/) framework for the frontend, providing a modern, performant React-based user experience.
+
+The backend is powered by Google Cloud Firebase:
+-   **Firestore**: Used as a NoSQL document database to store application data, such as user submissions and flag details.
+-   **Firebase Storage**: Used for storing user-uploaded files, like images or other media related to the flags.
+
+This architecture allows for a scalable and serverless backend, with real-time data synchronization capabilities provided by Firebase.
 
 ## Learn More
 
