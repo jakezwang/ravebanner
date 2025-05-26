@@ -65,6 +65,7 @@ export default function AdminDashboard() {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [reports, setReports] = useState<{ id: string; flagId: string; details: string; createdAt: { seconds: number } }[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string; type: 'flag' | 'report'; imageUrl?: string } | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -293,6 +294,23 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!deleteConfirmation) return;
+
+    const { id, type, imageUrl } = deleteConfirmation;
+
+    try {
+      if (type === 'flag') {
+        await deleteFlag(id, imageUrl || '');
+      } else if (type === 'report') {
+        await deleteReport(id);
+      }
+      setDeleteConfirmation(null);
+    } catch (error) {
+      console.error('Error deleting:', error);
+    }
+  };
+
   if (!user) {
     return (
       <div className="p-8 text-center">
@@ -464,7 +482,12 @@ export default function AdminDashboard() {
                     {flag.verified && (
                       <button onClick={() => unapproveFlag(flag.id)} className="bg-yellow-600 text-white px-4 py-1 rounded">Unapprove</button>
                     )}
-                    <button onClick={() => deleteFlag(flag.id, flag.imageUrl)} className="bg-red-600 text-white px-4 py-1 rounded">Delete</button>
+                    <button
+                      onClick={() => setDeleteConfirmation({ id: flag.id, type: 'flag', imageUrl: flag.imageUrl })}
+                      className="bg-red-600 text-white px-4 py-1 rounded"
+                    >
+                      Delete
+                    </button>
                     <button onClick={() => {
                       setEditId(flag.id);
                       setEditData({
@@ -685,6 +708,32 @@ export default function AdminDashboard() {
             </ul>
           )}
         </div>
+
+        {/* Delete confirmation modal */}
+        {deleteConfirmation && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded shadow-md w-full max-w-sm">
+              <h3 className="text-lg font-bold mb-4">Confirm Deletion</h3>
+              <p className="text-sm text-gray-700 mb-4">
+                Are you sure you want to delete this {deleteConfirmation.type === 'flag' ? 'flag' : 'report'}? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setDeleteConfirmation(null)}
+                  className="px-4 py-2 bg-gray-200 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
