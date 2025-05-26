@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app"
 import { getFirestore } from "firebase/firestore"
 import { getStorage } from "firebase/storage"
 import { getAuth } from "firebase/auth"
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -19,3 +20,17 @@ const storage = getStorage(app)
 const auth = getAuth(app)
 
 export { db, storage, auth, app }
+
+export const submitReport = async (flagId: string, details: string) => {
+  try {
+    const reportsCollection = collection(db, 'reports');
+    await addDoc(reportsCollection, {
+      flagId,
+      details,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error submitting report:', error);
+    throw error;
+  }
+};

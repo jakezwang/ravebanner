@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { collection, getDocs, updateDoc, deleteDoc, doc, query, DocumentData } from "firebase/firestore"
+import { collection, getDocs, updateDoc, deleteDoc, doc, query, orderBy, DocumentData } from "firebase/firestore"
 import { auth, db, storage } from "@/lib/firebase"
 import { GoogleAuthProvider, onAuthStateChanged, signInWithRedirect, signOut, User } from "firebase/auth"
 import toast, { Toaster } from 'react-hot-toast';
@@ -58,11 +58,13 @@ export default function AdminDashboard() {
   const [bulkImages, setBulkImages] = useState<File[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
-  const [approvalFilter, setApprovalFilter] = useState<'all' | 'approved' | 'pending'>('all');
+  const [approvalFilter, setApprovalFilter] = useState<'all' | 'approved' | 'pending' | 'reports'>('all');
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [reports, setReports] = useState<{ id: string; flagId: string; details: string; createdAt: { seconds: number } }[]>([]);
+  const [loadingReports, setLoadingReports] = useState(true);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -252,6 +254,45 @@ export default function AdminDashboard() {
     setSearchTags(searchTags.filter(t => t !== tag));
   };
 
+  useEffect(() => {
+    const fetchReports = async () => {
+      setLoadingReports(true);
+      try {
+        const reportsCollection = collection(db, 'reports');
+        const reportsQuery = query(reportsCollection, orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(reportsQuery);
+        const fetchedReports = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            flagId: data.flagId || '',
+            details: data.details || '',
+            createdAt: data.createdAt || { seconds: 0 },
+          };
+        });
+        setReports(fetchedReports);
+      } catch (error) {
+        console.error('Error fetching reports:', error);
+      } finally {
+        setLoadingReports(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
+  // Add a function to delete reports
+  const deleteReport = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "reports", id));
+      setReports(reports.filter(report => report.id !== id));
+      toast.success("Report deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      toast.error("Failed to delete report. Please try again.");
+    }
+  }
+
   if (!user) {
     return (
       <div className="p-8 text-center">
@@ -331,9 +372,69 @@ export default function AdminDashboard() {
           >
             Pending
           </button>
+          <button
+            onClick={() => setApprovalFilter('reports')}
+            className={`px-4 py-2 rounded ${approvalFilter === 'reports' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          >
+            Reports
+          </button>
         </div>
         {loading ? (
           <p>Loading...</p>
+        ) : approvalFilter === 'reports' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {reports.map(report => (
+              <div key={report.id} className="border rounded-xl shadow p-4 bg-white">
+                <Image
+                  src={flags.find(flag => flag.id === report.flagId)?.imageUrl || '/placeholder.png'}
+                  alt="Flag Image"
+                  width={300}
+                  height={200}
+                  className="w-full h-48 object-cover rounded cursor-pointer"
+                />
+                <h2 className="text-lg font-semibold mt-2">Report Details</h2>
+                <p className="text-sm text-gray-500">{report.details}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Submitted At: {new Date(report.createdAt.seconds * 1000).toLocaleDateString()}
+                </p>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => deleteReport(report.id)}
+                    className="bg-red-600 text-white px-4 py-1 rounded"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditId(report.flagId);
+                      const flag = flags.find(f => f.id === report.flagId);
+                      if (flag) {
+                        setEditData({
+                          country: flag.country || '',
+                          festival: flag.festival || [],
+                          genres: flag.genres || [],
+                          description: flag.description || '',
+                          language: flag.language || [],
+                        });
+                      }
+                    }}
+                    className="bg-yellow-500 text-white px-4 py-1 rounded"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      deleteReport(report.id);
+                      toast.success('Report resolved and deleted successfully!');
+                    }}
+                    className="bg-green-600 text-white px-4 py-1 rounded"
+                  >
+                    Resolve
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -565,6 +666,25 @@ export default function AdminDashboard() {
             slides={[{ src: lightboxImage }]}
           />
         )}
+
+        <div className="mt-10">
+          <h2 className="text-xl font-bold mb-4">Admin - Reports</h2>
+          {loadingReports ? (
+            <p>Loading reports...</p>
+          ) : reports.length === 0 ? (
+            <p>No reports found.</p>
+          ) : (
+            <ul className="space-y-4">
+              {reports.map(report => (
+                <li key={report.id} className="border p-4 rounded-md">
+                  <p><strong>Flag ID:</strong> {report.flagId}</p>
+                  <p><strong>Details:</strong> {report.details}</p>
+                  <p><strong>Submitted At:</strong> {new Date(report.createdAt.seconds * 1000).toLocaleString()}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </>
   )

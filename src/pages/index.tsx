@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { collection, getDocs, query, orderBy, Timestamp, updateDoc, doc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { db, submitReport } from '@/lib/firebase'
 import countries from 'world-countries'
 import { ThumbsUp, Eye, MessageCircle, Plus } from 'lucide-react'
 import { useRouter } from 'next/router'
@@ -42,6 +42,8 @@ export default function HomePage() {
   const [interactionMessage, setInteractionMessage] = useState<string | null>(null)
   const [claimFlagId, setClaimFlagId] = useState<string | null>(null)
   const [claimField, setClaimField] = useState<"location" | "genres" | "festival" | "language" | null>(null)
+  const [reportFlagId, setReportFlagId] = useState<string | null>(null)
+  const [reportDetails, setReportDetails] = useState<string>('')
   const router = useRouter()
 
   const openClaimModal = (
@@ -315,7 +317,24 @@ export default function HomePage() {
     };
 
     fetchFlagsWithFilters();
-  }, [filters, sortOption, currentPage]);
+  }, [filters, sortOption, currentPage, commentCounts]); // Added 'commentCounts' to the dependency array
+
+  const handleReportSubmit = async (flagId: string) => {
+    if (!reportDetails.trim()) {
+      alert('Please enter details for the report.');
+      return;
+    }
+
+    try {
+      await submitReport(flagId, reportDetails);
+      alert('Thank you for your report. We will review it shortly.');
+      setReportFlagId(null);
+      setReportDetails('');
+    } catch (error) {
+      alert('Failed to submit the report. Please try again later.');
+      console.error('Error submitting report:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
@@ -492,10 +511,53 @@ export default function HomePage() {
                           <span>{commentCounts[flag.id] || 0} Comment{commentCounts[flag.id] === 1 ? '' : 's'}</span>
                         </button>
                       </div>
-                      <span className="text-[10px] text-gray-500">
-                        Added on: {new Date(flag.createdAt.seconds * 1000).toLocaleDateString()}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-500">
+                          Added on: {new Date(flag.createdAt.seconds * 1000).toLocaleDateString()}
+                        </span>
+                        <button
+                          onClick={() => setReportFlagId(flag.id)}
+                          className="text-[10px] text-blue-500 hover:underline"
+                        >
+                          Report
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Report Button */}
+                    {/* <button
+                      onClick={() => setReportFlagId(flag.id)}
+                      className="text-xs text-gray-400 hover:text-gray-600 underline ml-2"
+                    >
+                      Report
+                    </button> */}
+
+                    {/* Report Input Box */}
+                    {reportFlagId === flag.id && (
+                      <div className="mt-2">
+                        <textarea
+                          placeholder="Enter your report details here..."
+                          className="w-full p-2 border border-gray-300 rounded-md text-black"
+                          rows={3}
+                          value={reportDetails}
+                          onChange={(e) => setReportDetails(e.target.value)}
+                        ></textarea>
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={() => handleReportSubmit(flag.id)}
+                            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                          >
+                            Submit
+                          </button>
+                          <button
+                            onClick={() => setReportFlagId(null)}
+                            className="ml-2 text-gray-500 hover:text-gray-700"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
