@@ -32,16 +32,12 @@ export type Flag = {
 
 export default function HomePage() {
   const [flags, setFlags] = useState<Flag[]>([])
-  const [filteredFlags, setFilteredFlags] = useState<Flag[]>([])
-  const [searchTags, setSearchTags] = useState<string[]>([])
-  const [searchInput, setSearchInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
   const [seenFlags, setSeenFlags] = useState<string[]>([])
   const [likedFlags, setLikedFlags] = useState<string[]>([])
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxImage, setLightboxImage] = useState('')
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [sortOption, setSortOption] = useState<'newest' | 'popular' | 'seen' | 'likes'>('popular')
   const [interactionMessage, setInteractionMessage] = useState<string | null>(null)
   const [claimFlagId, setClaimFlagId] = useState<string | null>(null)
@@ -101,18 +97,6 @@ export default function HomePage() {
       : `Marked as ${field === 'seen' ? 'seen' : 'liked'}!`
     )
     setTimeout(() => setInteractionMessage(null), 2000)
-  }
-
-  const handleTagSearch = (tag: string) => {
-    if (!searchTags.includes(tag)) {
-      setSearchTags([...searchTags, tag])
-    }
-    setSearchInput('')
-  }
-
-  const showTagPopup = (tag: string) => {
-    setSelectedTag(tag)
-    setTimeout(() => setSelectedTag(null), 2000)
   }
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -179,48 +163,10 @@ export default function HomePage() {
     fetchCommentCounts();
   }, []); // Empty dependency array to run only on mount
 
-  const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchInput(event.target.value);
-  };
-
   useEffect(() => {
     console.log('Flags before filtering:', flags);
-    console.log('Search Input:', searchInput);
-    console.log('Search Tags:', searchTags);
 
-    let result = [...flags];
-
-    if (searchInput.trim()) {
-      result = result.filter(flag => {
-        const allTags = [
-          ...(Array.isArray(flag.festival) ? flag.festival : []),
-          ...(Array.isArray(flag.location) ? flag.location : []),
-          ...(Array.isArray(flag.language) ? flag.language : []),
-          ...(Array.isArray(flag.genres) ? flag.genres : []),
-          flag.description || ''
-        ].map(t => t.toLowerCase());
-
-        const matches = allTags.some(t => t.includes(searchInput.toLowerCase()));
-        console.log('Flag:', flag, 'Matches Search Input:', matches);
-        return matches;
-      });
-    } else if (searchTags.length > 0) {
-      result = result.filter(flag => {
-        const allTags = [
-          ...(Array.isArray(flag.festival) ? flag.festival : []),
-          ...(Array.isArray(flag.location) ? flag.location : []),
-          ...(Array.isArray(flag.language) ? flag.language : []),
-          ...(Array.isArray(flag.genres) ? flag.genres : []),
-          flag.description || ''
-        ].map(t => t.toLowerCase());
-
-        const matches = searchTags.every(tag => allTags.some(t => t.includes(tag.toLowerCase())));
-        console.log('Flag:', flag, 'Matches Search Tags:', matches);
-        return matches;
-      });
-    }
-
-    console.log('Filtered Flags after search:', result);
+    const result = [...flags];
 
     const sortedFlags = [...result];
     if (sortOption === 'popular') {
@@ -240,8 +186,8 @@ export default function HomePage() {
 
     console.log('Paginated Flags:', paginatedFlags);
 
-    setFilteredFlags(paginatedFlags);
-  }, [flags, commentCounts, searchTags, searchInput, sortOption, currentPage]);
+    setFlags(paginatedFlags);
+  }, [flags, commentCounts, sortOption, currentPage]);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -296,54 +242,85 @@ export default function HomePage() {
     const startIndex = (currentPage - 1) * 15;
     const paginatedFlags = flags.slice(startIndex, startIndex + 15);
 
-    setFilteredFlags(paginatedFlags);
+    setFlags(paginatedFlags);
   }, [flags, currentPage]);
-
-  useEffect(() => {
-    // Apply filters to the fetched flags
-    const applyFilters = () => {
-      let filtered = [...flags];
-
-      // Filter by search tags
-      if (searchTags.length > 0) {
-        filtered = filtered.filter(flag =>
-          searchTags.every(tag =>
-            flag.location.includes(tag) ||
-            flag.language.includes(tag) ||
-            flag.genres.includes(tag) ||
-            (Array.isArray(flag.festival) ? flag.festival.includes(tag) : flag.festival === tag)
-          )
-        );
-      }
-
-      // Filter by search input
-      if (searchInput.trim() !== '') {
-        const lowercasedInput = searchInput.toLowerCase();
-        filtered = filtered.filter(flag =>
-          flag.location.some(loc => loc.toLowerCase().includes(lowercasedInput)) ||
-          flag.language.some(lang => lang.toLowerCase().includes(lowercasedInput)) ||
-          flag.genres.some(genre => genre.toLowerCase().includes(lowercasedInput)) ||
-          (Array.isArray(flag.festival) ? flag.festival.some(fest => fest.toLowerCase().includes(lowercasedInput)) : flag.festival.toLowerCase().includes(lowercasedInput)) ||
-          (flag.description && flag.description.toLowerCase().includes(lowercasedInput))
-        );
-      }
-
-      setFilteredFlags(filtered);
-    };
-
-    applyFilters();
-  }, [flags, searchTags, searchInput]);
 
   const paginationButtonStyle = `px-4 py-2 rounded-md font-semibold text-white bg-purple-700 hover:bg-purple-600 transition-colors`;
 
   useEffect(() => {
-    setFilteredFlags(flags);
+    setFlags(flags);
   }, [flags]);
+
+  const [filters, setFilters] = useState<string[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+
+  const addFilter = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (searchInput.trim() && !filters.includes(searchInput.trim())) {
+      setFilters([...filters, searchInput.trim()]);
+      setSearchInput('');
+    }
+  };
+
+  const removeFilter = (filter: string) => {
+    setFilters(filters.filter(f => f !== filter));
+  };
+
+  useEffect(() => {
+    const fetchFlagsWithFilters = async () => {
+      setLoading(true);
+      try {
+        // Fetch the complete list of flags from the database
+        const flagsCollection = collection(db, 'flags');
+        const flagsQuery = query(flagsCollection, orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(flagsQuery);
+        const allFlags = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flag));
+
+        // Filter flags based on the filters array
+        const filteredFlags = filters.length > 0
+          ? allFlags.filter(flag =>
+              filters.every(filter => // Use 'every' to ensure all filters are matched
+                (flag.description && flag.description.toLowerCase().includes(filter.toLowerCase())) ||
+                (Array.isArray(flag.festival) && flag.festival.some(f => f.toLowerCase().includes(filter.toLowerCase()))) ||
+                (flag.location && flag.location.some(loc => loc.toLowerCase().includes(filter.toLowerCase()))) ||
+                (flag.language && flag.language.some(lang => lang.toLowerCase().includes(filter.toLowerCase()))) ||
+                (flag.genres && flag.genres.some(genre => genre.toLowerCase().includes(filter.toLowerCase())))
+              )
+            )
+          : allFlags;
+
+        // Sort the filtered flags
+        const sortedFlags = [...filteredFlags];
+        if (sortOption === 'popular') {
+          sortedFlags.sort((a, b) => (b.seen + b.likes + (commentCounts[b.id] || 0)) - (a.seen + a.likes + (commentCounts[a.id] || 0)));
+        } else if (sortOption === 'seen') {
+          sortedFlags.sort((a, b) => b.seen - a.seen);
+        } else if (sortOption === 'likes') {
+          sortedFlags.sort((a, b) => b.likes - a.likes);
+        } else {
+          sortedFlags.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+        }
+
+        // Apply pagination
+        setTotalPages(Math.ceil(sortedFlags.length / 15));
+        const startIndex = (currentPage - 1) * 15;
+        const paginatedFlags = sortedFlags.slice(startIndex, startIndex + 15);
+
+        setFlags(paginatedFlags);
+      } catch (error) {
+        console.error('Error fetching flags with filters:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFlagsWithFilters();
+  }, [filters, sortOption, currentPage]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white">
       <div className="max-w-5xl mx-auto px-4 py-10 overflow-x-hidden">
-        <div className="mb-6 flex flex-wrap sm:flex-nowrap justify-between items-start gap-4 relative">
+        <div className="mb-4 flex flex-wrap sm:flex-nowrap justify-between items-start gap-4 relative">
           <div className="flex items-center gap-2 flex-1">
             <Image src="/favicon.svg" alt="Festival Flags Logo" width={32} height={32} className="w-8 h-8" />
             <div>
@@ -369,27 +346,36 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <input
-          type="text"
-          placeholder="Search by tag or keyword..."
-          value={searchInput}
-          onChange={handleSearchInputChange}
-          onKeyDown={e => e.key === 'Enter' && handleTagSearch(searchInput)}
-          className="w-full mb-4 p-2 border border-purple-500 rounded bg-black/40 text-white placeholder-purple-300"
-        />
+        {/* Search and Filter Section */}
+        <div className="mb-2">
+          {/* Search Input Box */}
+          <form onSubmit={addFilter} className="mb-1">
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search by keyword or any tag..."
+              className="border border-gray-300 rounded-md p-2 w-full mb-2 text-[var(--foreground)] bg-[var(--background)] placeholder-gray-500"
+            />
+          </form>
 
-        {/* Display selected filters */}
-        <div className="flex gap-2 mb-4 flex-wrap">
-          {searchTags.map((tag, idx) => (
-            <span
-              key={idx}
-              className="bg-purple-700 text-white px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 cursor-pointer"
-              onClick={() => setSearchTags(searchTags.filter((_, i) => i !== idx))} // Remove filter on click
-            >
-              {tag}
-              <button className="text-white hover:text-gray-300">✕</button>
-            </span>
-          ))}
+          {/* Filter Pills */}
+          <div className="flex flex-wrap gap-1 mt-1">
+            {filters.map((filter, index) => (
+              <div
+                key={index}
+                className={`flex items-center ${pillClass(filter)} cursor-pointer font-medium px-2 py-0.5 rounded-full text-xs mr-1 mb-1 inline-block`}
+              >
+                {filter}
+                <button
+                  onClick={() => removeFilter(filter)}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex gap-3 mb-4">
@@ -410,12 +396,12 @@ export default function HomePage() {
 
         {loading ? (
           <p>Loading flags...</p>
-        ) : filteredFlags.length === 0 ? (
-          <p>No matching flags found.</p>
+        ) : flags.length === 0 ? (
+          <p>No flags found.</p>
         ) : (
           <div className="space-y-6">
             {/* Render paginated flags */}
-            {filteredFlags.map(flag => (
+            {flags.map(flag => (
               <div key={flag.id} className="bg-white/10 border border-purple-600 p-4 rounded-xl shadow-md">
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div
@@ -466,7 +452,6 @@ export default function HomePage() {
                         {items.map((item, idx) => (
                           <span
                             key={idx}
-                            onClick={() => showTagPopup(item)}
                             title={item}
                             className={`${pillClass(label)} cursor-pointer font-medium px-2 py-0.5 rounded-full text-xs mr-1 mb-1 inline-block`}
                           >
@@ -566,18 +551,6 @@ export default function HomePage() {
 
       {lightboxOpen && (
         <Lightbox open={lightboxOpen} close={() => setLightboxOpen(false)} slides={[{ src: lightboxImage }]} />
-      )}
-
-      {selectedTag && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-purple-900 text-white px-6 py-4 rounded-xl border border-purple-400 shadow-lg max-w-sm text-center relative">
-            <button
-              className="absolute top-2 right-2 text-purple-300 hover:text-white"
-              onClick={() => setSelectedTag(null)}
-            >✕</button>
-            <p className="text-sm break-words">{selectedTag}</p>
-          </div>
-        </div>
       )}
 
       {claimFlagId && claimField && (
